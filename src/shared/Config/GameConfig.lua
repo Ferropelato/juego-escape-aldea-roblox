@@ -37,7 +37,7 @@ GameConfig.CraftingRecipes = {
 	BridgeKit = {
 		displayName = "Kit de puente",
 		description = "Arma un puente provisional",
-		ingredients = { Wood = 8, Vine = 4, Stone = 3 },
+		ingredients = { Wood = 7, Vine = 3, Stone = 3 },
 		unlocksChallenge = "StoneJump",
 	},
 	DivingMask = {
@@ -55,13 +55,13 @@ GameConfig.CraftingRecipes = {
 	HeatShield = {
 		displayName = "Escudo térmico",
 		description = "Resiste el calor del volcán",
-		ingredients = { Ore = 5, Crystal = 3, Ember = 2 },
+		ingredients = { Ore = 4, Crystal = 3, Ember = 2 },
 		unlocksChallenge = "VolcanoClimb",
 	},
 	EscapeBoat = {
 		displayName = "Bote de escape",
 		description = "Huye de la isla para siempre",
-		ingredients = { Wood = 15, Vine = 8, Ore = 5, Crystal = 5 },
+		ingredients = { Wood = 12, Vine = 7, Ore = 5, Crystal = 4 },
 		unlocksChallenge = "FinalEscape",
 	},
 	IcePick = {
@@ -382,6 +382,39 @@ GameConfig.Challenges = {
 		zoneSize = Vector3.new(100, 50, 260),
 		puzzleType = "Dodge",
 		completesIsland = true,
+	},
+}
+
+-- Recompensas al completar cada zona (no pay-to-win, refuerzan progresión)
+GameConfig.ZoneRewards = {
+	BeachLanding = { Wood = 2 },
+	JungleMaze = { Vine = 2, Shell = 1 },
+	RiverCross = { Wood = 2 },
+	StoneJump = { Stone = 2 },
+	LagoonDive = { Crystal = 1 },
+	CaveSystem = { Ore = 2, Ember = 1 },
+	CastleRuins = { Ore = 2, Crystal = 1 },
+	ChaseEscape = { Vine = 2 },
+	DodgeGauntlet = { Ember = 1 },
+	VolcanoClimb = { Crystal = 2 },
+	VolcanoInterior = { Ore = 2 },
+	FinalEscape = { Wood = 3, Crystal = 2 },
+	FrozenShore = { Crystal = 2 },
+	IceMaze = { Stone = 2 },
+	FrozenEscape = { Crystal = 3, Vine = 2 },
+	DesertOasis = { Shell = 2, Ember = 1 },
+	SandTemple = { Ore = 2, Stone = 2 },
+	DuneEscape = { Ember = 2, Crystal = 2 },
+}
+
+-- Recompensa diaria (retención, 1 vez cada 24h)
+GameConfig.DailyReward = {
+	cooldown = 86400,
+	rewards = {
+		{ Wood = 4, Vine = 2 },
+		{ Stone = 3, Shell = 2 },
+		{ Crystal = 1, Ore = 2 },
+		{ Ember = 2, Wood = 2 },
 	},
 }
 

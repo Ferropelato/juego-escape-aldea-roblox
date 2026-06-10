@@ -10,8 +10,8 @@ local SpawnService = require(script.Parent.Parent.Services.SpawnService)
 local NotificationService = require(script.Parent.Parent.Services.NotificationService)
 
 local ObjectiveService = require(script.Parent.Parent.Services.ObjectiveService)
-
-local RESPAWN_COOLDOWN = 3
+local MonetizationService = require(script.Parent.Parent.Services.MonetizationService)
+local RewardService = require(script.Parent.Parent.Services.RewardService)
 
 local RemoteHandlers = {}
 
@@ -19,6 +19,7 @@ function RemoteHandlers.init()
 	local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 	Remotes.RequestSync.OnServerEvent:Connect(function(player)
+		MonetizationService.refreshEntitlements(player)
 		ChallengeService.syncToClient(player)
 		ObjectiveService.syncObjectives(player)
 	end)
@@ -38,10 +39,14 @@ function RemoteHandlers.init()
 	end)
 
 	Remotes.RequestRespawn.OnServerEvent:Connect(function(player)
-		local last = player:GetAttribute("LastRespawn") or 0
-		if tick() - last < RESPAWN_COOLDOWN then
-			NotificationService.send(player, "Esperá un momento antes de reaparecer", "error")
-			return
+		local usedToken = MonetizationService.tryUseReviveToken(player)
+		if not usedToken then
+			local cooldown = MonetizationService.getRespawnCooldown(player)
+			local last = player:GetAttribute("LastRespawn") or 0
+			if tick() - last < cooldown then
+				NotificationService.send(player, "Esperá un momento antes de reaparecer", "error")
+				return
+			end
 		end
 		player:SetAttribute("LastRespawn", tick())
 
@@ -79,6 +84,17 @@ function RemoteHandlers.init()
 		DataService.save(player)
 		ChallengeService.syncToClient(player)
 		ObjectiveService.syncObjectives(player)
+	end)
+
+	Remotes.SetCosmetic.OnServerEvent:Connect(function(player, trailId: string)
+		MonetizationService.setCosmetic(player, trailId)
+	end)
+
+	Remotes.ClaimDailyReward.OnServerEvent:Connect(function(player)
+		local ok, err = RewardService.claimDaily(player)
+		if not ok then
+			NotificationService.send(player, err or "No disponible", "error")
+		end
 	end)
 end
 

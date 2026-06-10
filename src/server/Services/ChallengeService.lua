@@ -109,6 +109,8 @@ end
 function ChallengeService.completeAndSync(player: Player, challengeId: string): (boolean, string?)
 	local ok, name = ChallengeService.completeChallenge(player, challengeId)
 	if ok then
+		local RewardService = require(script.Parent.RewardService)
+		RewardService.grantZoneReward(player, challengeId)
 		DataService.save(player)
 		ChallengeService.syncToClient(player)
 		local ObjectiveService = require(script.Parent.ObjectiveService)

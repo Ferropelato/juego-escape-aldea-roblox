@@ -22,6 +22,7 @@ local HazardService = require(script.Services.HazardService)
 local ZoneProgressionService = require(script.Services.ZoneProgressionService)
 local WildlifeService = require(script.Services.WildlifeService)
 local OnboardingService = require(script.Services.OnboardingService)
+local MonetizationService = require(script.Services.MonetizationService)
 
 print("[EscapeIsland] Iniciando servidor...")
 
@@ -61,6 +62,7 @@ if map then
 	WildlifeService.init()
 	BoundaryService.init()
 end
+MonetizationService.init()
 RemoteHandlers.init()
 
 Players.PlayerAdded:Connect(function(player)

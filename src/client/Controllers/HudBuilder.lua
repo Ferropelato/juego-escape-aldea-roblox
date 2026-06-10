@@ -30,6 +30,9 @@ export type HudRefs = {
 	onboardingText: TextLabel,
 	onboardingStep: TextLabel?,
 	onboardingDismiss: TextButton?,
+	shopButton: TextButton,
+	shopPanel: Frame,
+	shopList: ScrollingFrame,
 }
 
 function HudBuilder.getRefs(): HudRefs?
@@ -63,6 +66,9 @@ function HudBuilder.getRefs(): HudRefs?
 		onboardingText = gui:FindFirstChild("OnboardingBanner") and gui.OnboardingBanner:FindFirstChild("Text") :: TextLabel,
 		onboardingStep = gui:FindFirstChild("OnboardingBanner") and gui.OnboardingBanner:FindFirstChild("StepLabel") :: TextLabel,
 		onboardingDismiss = gui:FindFirstChild("OnboardingBanner") and gui.OnboardingBanner:FindFirstChild("Dismiss") :: TextButton,
+		shopButton = main:FindFirstChild("ShopButton") :: TextButton,
+		shopPanel = gui:FindFirstChild("ShopPanel") :: Frame,
+		shopList = gui:FindFirstChild("ShopPanel") and gui.ShopPanel:FindFirstChild("ShopList") :: ScrollingFrame,
 	}
 end
 
@@ -224,6 +230,9 @@ function HudBuilder.ensure(): HudRefs
 	achCount.TextSize = 12
 	achCount.Parent = main
 	corner(achCount, 6)
+
+	local shopBtn = actionButton("ShopButton", "🛒 Tienda", 194, Color3.fromRGB(55, 75, 120))
+	shopBtn.Position = UDim2.new(0, 194, 0, 296)
 
 	local notifContainer = Instance.new("Frame")
 	notifContainer.Name = "NotificationContainer"
@@ -387,6 +396,66 @@ function HudBuilder.ensure(): HudRefs
 	onboardDismiss.TextSize = 14
 	onboardDismiss.Parent = onboardBanner
 
+	local shopPanel = Instance.new("Frame")
+	shopPanel.Name = "ShopPanel"
+	shopPanel.Visible = false
+	shopPanel.Size = UDim2.new(0, 340, 0, 440)
+	shopPanel.Position = UDim2.new(0.5, -170, 0.5, -220)
+	shopPanel.BackgroundColor3 = Color3.fromRGB(22, 26, 34)
+	shopPanel.BackgroundTransparency = 0.05
+	shopPanel.BorderSizePixel = 0
+	shopPanel.Parent = gui
+	corner(shopPanel, 10)
+
+	local shopTitle = Instance.new("TextLabel")
+	shopTitle.Name = "Title"
+	shopTitle.Size = UDim2.new(1, -12, 0, 32)
+	shopTitle.Position = UDim2.new(0, 6, 0, 6)
+	shopTitle.BackgroundTransparency = 1
+	shopTitle.Text = "🛒 Tienda ética"
+	shopTitle.TextColor3 = Color3.fromRGB(255, 220, 120)
+	shopTitle.Font = Enum.Font.GothamBold
+	shopTitle.TextSize = 18
+	shopTitle.TextXAlignment = Enum.TextXAlignment.Left
+	shopTitle.Parent = shopPanel
+
+	local shopSubtitle = Instance.new("TextLabel")
+	shopSubtitle.Name = "Subtitle"
+	shopSubtitle.Size = UDim2.new(1, -12, 0, 18)
+	shopSubtitle.Position = UDim2.new(0, 6, 0, 30)
+	shopSubtitle.BackgroundTransparency = 1
+	shopSubtitle.Text = "Cosméticos y QoL — sin pay-to-win"
+	shopSubtitle.TextColor3 = Color3.fromRGB(150, 160, 170)
+	shopSubtitle.Font = Enum.Font.Gotham
+	shopSubtitle.TextSize = 11
+	shopSubtitle.TextXAlignment = Enum.TextXAlignment.Left
+	shopSubtitle.Parent = shopPanel
+
+	local shopClose = Instance.new("TextButton")
+	shopClose.Name = "CloseButton"
+	shopClose.Size = UDim2.new(0, 28, 0, 28)
+	shopClose.Position = UDim2.new(1, -34, 0, 6)
+	shopClose.BackgroundColor3 = Color3.fromRGB(80, 40, 40)
+	shopClose.BorderSizePixel = 0
+	shopClose.Text = "✕"
+	shopClose.TextColor3 = Color3.new(1, 1, 1)
+	shopClose.Font = Enum.Font.GothamBold
+	shopClose.TextSize = 14
+	shopClose.Parent = shopPanel
+	corner(shopClose, 6)
+
+	local shopScroll = Instance.new("ScrollingFrame")
+	shopScroll.Name = "ShopList"
+	shopScroll.Size = UDim2.new(1, -12, 1, -54)
+	shopScroll.Position = UDim2.new(0, 6, 0, 48)
+	shopScroll.BackgroundColor3 = Color3.fromRGB(12, 14, 18)
+	shopScroll.BackgroundTransparency = 0.1
+	shopScroll.BorderSizePixel = 0
+	shopScroll.ScrollBarThickness = 6
+	shopScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+	shopScroll.Parent = shopPanel
+	corner(shopScroll, 6)
+
 	return {
 		screenGui = gui,
 		mainHud = main,
@@ -409,6 +478,9 @@ function HudBuilder.ensure(): HudRefs
 		onboardingText = onboardText,
 		onboardingStep = onboardStep,
 		onboardingDismiss = onboardDismiss,
+		shopButton = shopBtn,
+		shopPanel = shopPanel,
+		shopList = shopScroll,
 	}
 end
 
