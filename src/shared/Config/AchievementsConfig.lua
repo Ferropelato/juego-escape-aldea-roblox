@@ -75,6 +75,27 @@ AchievementsConfig.List = {
 		icon = "🛡️",
 		order = 10,
 	},
+	DesertArrival = {
+		id = "DesertArrival",
+		displayName = "Hijo del desierto",
+		description = "Llegá a la Isla del Desierto",
+		icon = "🏜️",
+		order = 11,
+	},
+	TempleRaider = {
+		id = "TempleRaider",
+		displayName = "Saqueador del templo",
+		description = "Resolvé el enigma del templo enterrado",
+		icon = "🏛️",
+		order = 12,
+	},
+	DesertLegend = {
+		id = "DesertLegend",
+		displayName = "Leyenda del desierto",
+		description = "Escapá de las dunas y completá el juego",
+		icon = "👑",
+		order = 13,
+	},
 }
 
 function AchievementsConfig.get(id: string)

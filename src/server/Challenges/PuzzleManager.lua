@@ -9,16 +9,56 @@ local InventoryService = require(script.Parent.Parent.Services.InventoryService)
 
 local PuzzleManager = {}
 PuzzleManager._state = {} :: { [string]: any }
-PuzzleManager._statueProgress = {} :: { [number]: { number } }
+PuzzleManager._statueProgress = {} :: { [string]: { number } }
 
-function PuzzleManager.onStatueActivated(player: Player, statueIndex: number)
-	local key = player.UserId
+local STATUE_PUZZLES = {
+	CastleRuins = {
+		count = 4,
+		correct = { 2, 4, 1, 3 },
+		challengeId = "CastleRuins",
+		successMsg = "¡La puerta del castillo se abre!",
+		failMsg = "Orden incorrecto. Las estatuas vuelven a su lugar.",
+	},
+	SandTemple = {
+		count = 3,
+		correct = { 1, 3, 2 },
+		challengeId = "SandTemple",
+		successMsg = "¡El templo antiguo se revela!",
+		failMsg = "Orden incorrecto. Los ídolos se reinician.",
+	},
+}
+
+function PuzzleManager.onStatueActivated(player: Player, statueIndex: number, puzzleKey: string)
+	local cfg = STATUE_PUZZLES[puzzleKey]
+	if not cfg then
+		return
+	end
+
+	local key = player.UserId .. "_" .. puzzleKey
 	PuzzleManager._statueProgress[key] = PuzzleManager._statueProgress[key] or {}
 	table.insert(PuzzleManager._statueProgress[key], statueIndex)
 
-	if #PuzzleManager._statueProgress[key] == 4 then
-		PuzzleManager._statuePuzzle(player, table.clone(PuzzleManager._statueProgress[key]))
+	if #PuzzleManager._statueProgress[key] == cfg.count then
+		PuzzleManager._resolveStatuePuzzle(player, table.clone(PuzzleManager._statueProgress[key]), cfg)
 		PuzzleManager._statueProgress[key] = {}
+	end
+end
+
+function PuzzleManager._resolveStatuePuzzle(player: Player, sequence: { number }, cfg: any)
+	if type(sequence) ~= "table" or #sequence ~= cfg.count then
+		return
+	end
+
+	for i = 1, cfg.count do
+		if sequence[i] ~= cfg.correct[i] then
+			NotificationService.send(player, cfg.failMsg, "error")
+			return
+		end
+	end
+
+	local ok = ChallengeService.completeAndSync(player, cfg.challengeId)
+	if ok then
+		NotificationService.send(player, cfg.successMsg, "success")
 	end
 end
 
@@ -28,33 +68,15 @@ function PuzzleManager.handleInteraction(player: Player, puzzleId: string, paylo
 	end
 
 	if puzzleId == "StatuePuzzle" then
-		PuzzleManager._statuePuzzle(player, payload)
+		PuzzleManager._resolveStatuePuzzle(player, payload, STATUE_PUZZLES.CastleRuins)
+	elseif puzzleId == "RelicPuzzle" then
+		PuzzleManager._resolveStatuePuzzle(player, payload, STATUE_PUZZLES.SandTemple)
 	elseif puzzleId == "ShellSequence" then
 		PuzzleManager._shellSequence(player, payload)
 	elseif puzzleId == "MazeSign" then
 		PuzzleManager._mazeSign(player, payload)
 	else
 		NotificationService.send(player, "Interacción registrada", "info")
-	end
-end
-
-function PuzzleManager._statuePuzzle(player: Player, sequence: { number }?)
-	if type(sequence) ~= "table" or #sequence ~= 4 then
-		NotificationService.send(player, "Activá las 4 estatuas en el orden correcto", "info")
-		return
-	end
-
-	local correct = { 2, 4, 1, 3 }
-	for i = 1, 4 do
-		if sequence[i] ~= correct[i] then
-			NotificationService.send(player, "Orden incorrecto. Las estatuas vuelven a su lugar.", "error")
-			return
-		end
-	end
-
-	local ok = ChallengeService.completeAndSync(player, "CastleRuins")
-	if ok then
-		NotificationService.send(player, "¡La puerta del castillo se abre!", "success")
 	end
 end
 
@@ -95,7 +117,9 @@ function PuzzleManager._mazeSign(player: Player, signIndex: number?)
 end
 
 Players.PlayerRemoving:Connect(function(player)
-	PuzzleManager._statueProgress[player.UserId] = nil
+	for puzzleKey in STATUE_PUZZLES do
+		PuzzleManager._statueProgress[player.UserId .. "_" .. puzzleKey] = nil
+	end
 	PuzzleManager._state["shell_" .. player.UserId] = nil
 end)
 

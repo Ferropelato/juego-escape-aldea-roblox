@@ -14,6 +14,7 @@ local MapBuilder = {}
 
 local ISLAND1_OFFSET = Vector3.new(0, 0, 0)
 local ISLAND2_OFFSET = Vector3.new(2500, 0, 0)
+local ISLAND3_OFFSET = Vector3.new(5000, 0, 0)
 
 local ZONE_LAYOUT_ISLAND1 = {
 	BeachLanding = ISLAND1_OFFSET + Vector3.new(0, 5, 0),
@@ -34,6 +35,12 @@ local ZONE_LAYOUT_ISLAND2 = {
 	FrozenShore = ISLAND2_OFFSET + Vector3.new(0, 5, 0),
 	IceMaze = ISLAND2_OFFSET + Vector3.new(200, 8, 120),
 	FrozenEscape = ISLAND2_OFFSET + Vector3.new(420, 12, 80),
+}
+
+local ZONE_LAYOUT_ISLAND3 = {
+	DesertOasis = ISLAND3_OFFSET + Vector3.new(0, 5, 0),
+	SandTemple = ISLAND3_OFFSET + Vector3.new(200, 10, 100),
+	DuneEscape = ISLAND3_OFFSET + Vector3.new(400, 15, 60),
 }
 
 local function makePart(props: {
@@ -116,6 +123,9 @@ local ZONE_ENTRY_OFFSETS: { [string]: Vector3 } = {
 	FrozenShore = Vector3.new(0, 4, 55),
 	IceMaze = Vector3.new(-70, 4, -50),
 	FrozenEscape = Vector3.new(-75, 4, -20),
+	DesertOasis = Vector3.new(0, 4, 55),
+	SandTemple = Vector3.new(-70, 4, -45),
+	DuneEscape = Vector3.new(-42, 12, 0),
 }
 
 local function createZoneEntry(parent: Instance, challenge, center: Vector3)
@@ -647,7 +657,7 @@ local function buildCastleZone(zoneFolder: Folder, center: Vector3, challenge)
 				prompt.Parent = base
 				local idx = i
 				prompt.Triggered:Connect(function(player)
-					PuzzleManager.onStatueActivated(player, idx)
+					PuzzleManager.onStatueActivated(player, idx, "CastleRuins")
 				end)
 			end
 		end
@@ -945,6 +955,170 @@ local function buildFrozenEscapeZone(zoneFolder: Folder, center: Vector3, challe
 	})
 end
 
+-- ─── ZONAS ISLA 3 (desierto) ───────────────────────────────────
+
+local function buildDesertOasisZone(zoneFolder: Folder, center: Vector3, challenge)
+	createZoneFloor(zoneFolder, center, Vector3.new(150, 0, 130))
+	createSpawn(zoneFolder, center)
+	createZoneBounds(zoneFolder, challenge, center)
+	local deco = PropGenerator.decoFolder(zoneFolder)
+
+	makePart({
+		name = "OasisPool",
+		size = Vector3.new(40, 3, 30),
+		position = center + Vector3.new(-10, 0, 10),
+		color = Color3.fromRGB(40, 120, 180),
+		material = Enum.Material.Glass,
+		parent = zoneFolder,
+		transparency = 0.35,
+	})
+
+	makePart({
+		name = "SandRing",
+		size = Vector3.new(160, 3, 100),
+		position = center + Vector3.new(0, 0, -20),
+		color = Color3.fromRGB(220, 190, 130),
+		material = Enum.Material.Sand,
+		parent = zoneFolder,
+	})
+
+	for i = 1, 6 do
+		local cactusPos = center + Vector3.new(-55 + i * 18, 0, 25 + (i % 3) * 12)
+		makePart({
+			name = "Cactus_" .. i,
+			size = Vector3.new(2, 5 + (i % 3), 2),
+			position = cactusPos + Vector3.new(0, 2.5, 0),
+			color = Color3.fromRGB(50, 120, 60),
+			material = Enum.Material.Grass,
+			parent = deco,
+		})
+	end
+
+	PropGenerator.scatterRocks(deco, center, 60, 10, "sand", 901)
+	PropGenerator.scatterPalms(deco, center + Vector3.new(0, 0, 15), 35, 4, 902)
+
+	createResourceNode(zoneFolder, "Ember", center + Vector3.new(-20, 2, 15))
+	createResourceNode(zoneFolder, "Ember", center + Vector3.new(30, 2, 8))
+	createResourceNode(zoneFolder, "Shell", center + Vector3.new(-35, 2, 30))
+	createResourceNode(zoneFolder, "Shell", center + Vector3.new(15, 2, 35))
+	createResourceNode(zoneFolder, "Stone", center + Vector3.new(40, 2, 20))
+	createResourceNode(zoneFolder, "Ore", center + Vector3.new(-40, 2, 5))
+
+	createMissionBoard(zoneFolder, center + Vector3.new(-5, 6, 42), "🏜️ Oasis del desierto", {
+		"Recolectá brasas y conchas del oasis.",
+		"Fabricá la Llave del templo (🔨 Craft).",
+		"Cruzá el puente de piedra hacia las ruinas.",
+	})
+
+	createFinish(zoneFolder, center + Vector3.new(68, 3, 0))
+
+	local bridgeStart = center + Vector3.new(78, 4, 0)
+	local bridgeEnd = ZONE_LAYOUT_ISLAND3.SandTemple + Vector3.new(-70, 4, -45)
+	createWalkBridge(zoneFolder, "SandTemple", bridgeStart, bridgeEnd, 5)
+end
+
+local function buildSandTempleZone(zoneFolder: Folder, center: Vector3, challenge)
+	createZoneFloor(zoneFolder, center, Vector3.new(160, 0, 150))
+	createSpawn(zoneFolder, center + Vector3.new(-70, 0, -45))
+	createZoneBounds(zoneFolder, challenge, center)
+	local deco = PropGenerator.decoFolder(zoneFolder)
+
+	createMissionBoard(zoneFolder, center + Vector3.new(-72, 6, -58), "🏛️ Templo enterrado", {
+		"Necesitás la Llave del templo para entrar.",
+		"Activá los 3 ídolos en orden: 1 → 3 → 2",
+		"Las ruinas se abrirán al resolver el enigma.",
+	})
+
+	-- Pirámide parcial enterrada
+	makePart({
+		name = "PyramidBase",
+		size = Vector3.new(80, 20, 80),
+		position = center + Vector3.new(0, 8, 0),
+		color = Color3.fromRGB(200, 170, 110),
+		material = Enum.Material.Sand,
+		parent = deco,
+	})
+	makePart({
+		name = "PyramidTop",
+		size = Vector3.new(50, 15, 50),
+		position = center + Vector3.new(0, 22, 0),
+		color = Color3.fromRGB(210, 180, 120),
+		material = Enum.Material.Sand,
+		parent = deco,
+	})
+
+	PropGenerator.scatterRocks(deco, center, 70, 12, "sand", 911)
+
+	local PuzzleManager = require(script.Parent.Parent.Challenges.PuzzleManager)
+	for i = 1, 3 do
+		local relicPos = center + Vector3.new((i - 2) * 18, 0, 20)
+		PropGenerator.statue(zoneFolder, relicPos, i)
+		local statue = zoneFolder:FindFirstChild("Statue_" .. i)
+		if statue then
+			local base = statue:FindFirstChild("Base")
+			if base then
+				base.Color = Color3.fromRGB(180, 140, 80)
+				base.Material = Enum.Material.Sandstone
+				local prompt = Instance.new("ProximityPrompt")
+				prompt.ActionText = "Activar"
+				prompt.ObjectText = "Ídolo " .. i
+				prompt.Parent = base
+				local idx = i
+				prompt.Triggered:Connect(function(player)
+					PuzzleManager.onStatueActivated(player, idx, "SandTemple")
+				end)
+			end
+		end
+	end
+
+	createGate(zoneFolder, challenge.id, center + Vector3.new(-72, 6, -45), Vector3.new(14, 12, 3))
+	createResourceNode(zoneFolder, "Ore", center + Vector3.new(35, 3, -15))
+	createResourceNode(zoneFolder, "Crystal", center + Vector3.new(-25, 3, 10))
+
+	local bridgeStart = center + Vector3.new(55, 4, 0)
+	local bridgeEnd = ZONE_LAYOUT_ISLAND3.DuneEscape + Vector3.new(-42, 12, 0)
+	createWalkBridge(zoneFolder, "DuneEscape", bridgeStart, bridgeEnd, 5)
+end
+
+local function buildDuneEscapeZone(zoneFolder: Folder, center: Vector3, challenge)
+	createZoneFloor(zoneFolder, center, Vector3.new(110, 0, 270))
+	createSpawn(zoneFolder, center + Vector3.new(-40, 12, 0))
+	createZoneBounds(zoneFolder, challenge, center)
+	local deco = PropGenerator.decoFolder(zoneFolder)
+
+	createMissionBoard(zoneFolder, center + Vector3.new(-38, 18, -15), "🌪️ Escape de las dunas", {
+		"Fabricá el Planeador de arena antes de entrar.",
+		"Esquivá los proyectiles de la tormenta.",
+		"Llegá al portal verde al final del cañón.",
+	})
+
+	for i = 0, 12 do
+		local dunePos = center + Vector3.new(math.sin(i * 0.8) * 15, 2 + (i % 4), i * 18)
+		makePart({
+			name = "Dune_" .. i,
+			size = Vector3.new(18 + (i % 3) * 4, 4 + (i % 2) * 2, 14),
+			position = dunePos,
+			color = Color3.fromRGB(210, 175, 120),
+			material = Enum.Material.Sand,
+			parent = deco,
+		})
+	end
+
+	PropGenerator.dirtPath(deco, center + Vector3.new(-35, 0.5, 0), center + Vector3.new(0, 0.5, 120), 8, 921)
+
+	createGate(zoneFolder, challenge.id, center + Vector3.new(-44, 14, 0), Vector3.new(12, 10, 3))
+	createFinish(zoneFolder, center + Vector3.new(0, 10, 125))
+
+	makePart({
+		name = "EscapeGlider",
+		size = Vector3.new(12, 2, 8),
+		position = center + Vector3.new(5, 12, 130),
+		color = Color3.fromRGB(160, 120, 70),
+		material = Enum.Material.Fabric,
+		parent = deco,
+	})
+end
+
 local BUILDERS = {
 	BeachLanding = buildBeachZone,
 	JungleMaze = buildJungleZone,
@@ -961,6 +1135,9 @@ local BUILDERS = {
 	FrozenShore = buildFrozenShoreZone,
 	IceMaze = buildIceMazeZone,
 	FrozenEscape = buildFrozenEscapeZone,
+	DesertOasis = buildDesertOasisZone,
+	SandTemple = buildSandTempleZone,
+	DuneEscape = buildDuneEscapeZone,
 }
 
 -- Sin billboards gigantes en el mundo (el cliente muestra zona actual arriba)
@@ -1021,6 +1198,28 @@ local function buildIsland2Base(islandFolder: Folder, offset: Vector3)
 	PropGenerator.island2Landscape(islandFolder, offset, ZONE_LAYOUT_ISLAND2)
 end
 
+local function buildIsland3Base(islandFolder: Folder, offset: Vector3)
+	makePart({
+		name = "IslandBase",
+		size = Vector3.new(700, 18, 700),
+		position = offset + Vector3.new(300, -5, 0),
+		color = Color3.fromRGB(210, 175, 115),
+		material = Enum.Material.Sand,
+		parent = islandFolder,
+	})
+
+	makePart({
+		name = "DuneField",
+		size = Vector3.new(200, 8, 200),
+		position = offset + Vector3.new(450, 2, -100),
+		color = Color3.fromRGB(225, 190, 130),
+		material = Enum.Material.Sand,
+		parent = islandFolder,
+	})
+
+	PropGenerator.island3Landscape(islandFolder, offset, ZONE_LAYOUT_ISLAND3)
+end
+
 local function buildIsland(islandId: string, offset: Vector3)
 	local islandFolder = Instance.new("Folder")
 	islandFolder.Name = islandId
@@ -1029,6 +1228,8 @@ local function buildIsland(islandId: string, offset: Vector3)
 		buildIsland1Base(islandFolder, offset)
 	elseif islandId == "Island2_Frozen" then
 		buildIsland2Base(islandFolder, offset)
+	elseif islandId == "Island3_Desert" then
+		buildIsland3Base(islandFolder, offset)
 	else
 		makePart({
 			name = "IslandBase",
@@ -1044,7 +1245,12 @@ local function buildIsland(islandId: string, offset: Vector3)
 	zonesFolder.Name = "Zones"
 	zonesFolder.Parent = islandFolder
 
-	local zoneLayout = if islandId == "Island2_Frozen" then ZONE_LAYOUT_ISLAND2 else ZONE_LAYOUT_ISLAND1
+	local zoneLayout = ZONE_LAYOUT_ISLAND1
+	if islandId == "Island2_Frozen" then
+		zoneLayout = ZONE_LAYOUT_ISLAND2
+	elseif islandId == "Island3_Desert" then
+		zoneLayout = ZONE_LAYOUT_ISLAND3
+	end
 
 	local challenges = GameConfig.getChallengesForIsland(islandId)
 	for _, challenge in challenges do
@@ -1069,7 +1275,7 @@ local function buildIsland(islandId: string, offset: Vector3)
 			createZoneBounds(zoneFolder, challenge, layout)
 		end
 		-- JungleMaze y RiverCross registran entrada al final del puente
-		if challenge.id ~= "JungleMaze" and challenge.id ~= "RiverCross" and challenge.id ~= "IceMaze" then
+		if challenge.id ~= "JungleMaze" and challenge.id ~= "RiverCross" and challenge.id ~= "IceMaze" and challenge.id ~= "SandTemple" then
 			createZoneEntry(zoneFolder, challenge, layout)
 		end
 
@@ -1094,6 +1300,9 @@ function MapBuilder.build()
 
 	local island2 = buildIsland("Island2_Frozen", ISLAND2_OFFSET)
 	island2.Parent = map
+
+	local island3 = buildIsland("Island3_Desert", ISLAND3_OFFSET)
+	island3.Parent = map
 
 	map.Parent = Workspace
 	return map

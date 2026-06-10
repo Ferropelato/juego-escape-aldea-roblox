@@ -218,7 +218,7 @@ function HudBuilder.ensure(): HudRefs
 	achCount.Position = UDim2.new(0, 100, 0, 296)
 	achCount.BackgroundColor3 = Color3.fromRGB(35, 38, 45)
 	achCount.BorderSizePixel = 0
-	achCount.Text = "0/10"
+	achCount.Text = "0/13"
 	achCount.TextColor3 = Color3.fromRGB(255, 220, 100)
 	achCount.Font = Enum.Font.GothamBold
 	achCount.TextSize = 12

@@ -76,6 +76,18 @@ GameConfig.CraftingRecipes = {
 		ingredients = { Wood = 8, Crystal = 4, Vine = 4 },
 		unlocksChallenge = "FrozenEscape",
 	},
+	DesertKey = {
+		displayName = "Llave del templo",
+		description = "Abre las puertas de las ruinas enterradas",
+		ingredients = { Ore = 3, Stone = 4, Shell = 3 },
+		unlocksChallenge = "SandTemple",
+	},
+	SandGlider = {
+		displayName = "Planeador de arena",
+		description = "Surfea las dunas hasta la salida",
+		ingredients = { Wood = 6, Vine = 4, Ember = 3 },
+		unlocksChallenge = "DuneEscape",
+	},
 }
 
 -- Islas del juego (se desbloquean al completar la anterior)
@@ -323,6 +335,52 @@ GameConfig.Challenges = {
 		requiredCraft = "IceBoat",
 		zoneSize = Vector3.new(180, 50, 200),
 		puzzleType = "Chase",
+		completesIsland = true,
+	},
+
+	-- ISLA 3 - DESIERTO
+	DesertOasis = {
+		id = "DesertOasis",
+		island = "Island3_Desert",
+		order = 1,
+		displayName = "Oasis del desierto",
+		description = "Encontrá agua y recursos en medio de las dunas",
+		difficulty = 1,
+		checkpointId = "CP_DesertOasis",
+		requiredChallenge = nil,
+		requiredCraft = nil,
+		zoneSize = Vector3.new(140, 30, 140),
+		objectives = {
+			{ type = "collect", resource = "Ember", amount = 2, text = "Recolectar brasas del oasis" },
+			{ type = "collect", resource = "Shell", amount = 2, text = "Recolectar conchas antiguas" },
+			{ type = "reach", text = "Cruzar el puente de piedra al templo" },
+		},
+	},
+	SandTemple = {
+		id = "SandTemple",
+		island = "Island3_Desert",
+		order = 2,
+		displayName = "Templo enterrado",
+		description = "Activá los ídolos antiguos en el orden correcto",
+		difficulty = 5,
+		checkpointId = "CP_SandTemple",
+		requiredChallenge = "DesertOasis",
+		requiredCraft = "DesertKey",
+		zoneSize = Vector3.new(150, 50, 150),
+		puzzleType = "RelicPuzzle",
+	},
+	DuneEscape = {
+		id = "DuneEscape",
+		island = "Island3_Desert",
+		order = 3,
+		displayName = "Escape de las dunas",
+		description = "Esquivá la tormenta de arena hasta el portal final",
+		difficulty = 9,
+		checkpointId = "CP_DesertFinal",
+		requiredChallenge = "SandTemple",
+		requiredCraft = "SandGlider",
+		zoneSize = Vector3.new(100, 50, 260),
+		puzzleType = "Dodge",
 		completesIsland = true,
 	},
 }

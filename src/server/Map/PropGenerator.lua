@@ -1532,4 +1532,45 @@ function PropGenerator.island2Landscape(islandFolder: Folder, offset: Vector3, l
 	return landscape
 end
 
+function PropGenerator.island3Landscape(islandFolder: Folder, offset: Vector3, layout: { [string]: Vector3 })
+	local landscape = folder(islandFolder, "Landscape")
+	local rand = rng(30001)
+
+	for i = 1, 18 do
+		local angle = rand(0, math.pi * 2)
+		local dist = rand(60, 300)
+		part({
+			name = "Dune",
+			size = Vector3.new(rand(20, 45), rand(5, 14), rand(18, 40)),
+			position = offset + Vector3.new(math.cos(angle) * dist, rand(1, 5), math.sin(angle) * dist),
+			color = Color3.fromRGB(215, 180, 120),
+			material = Enum.Material.Sand,
+			parent = landscape,
+		})
+	end
+
+	PropGenerator.scatterRocks(landscape, offset + Vector3.new(300, 0, 0), 220, 20, "sand", 501)
+
+	for i = 1, 8 do
+		part({
+			name = "DeadTree",
+			size = Vector3.new(1.5, rand(6, 12), 1.5),
+			position = offset + Vector3.new(rand(-200, 200), rand(3, 6), rand(-200, 200)),
+			color = Color3.fromRGB(90, 70, 50),
+			material = Enum.Material.Wood,
+			parent = landscape,
+		})
+	end
+
+	local paths = {
+		{ layout.DesertOasis, layout.SandTemple },
+		{ layout.SandTemple, layout.DuneEscape },
+	}
+	for i, path in paths do
+		PropGenerator.dirtPath(landscape, path[1] + Vector3.new(0, 0.5, 0), path[2] + Vector3.new(0, 0.5, 0), 9, 600 + i)
+	end
+
+	return landscape
+end
+
 return PropGenerator

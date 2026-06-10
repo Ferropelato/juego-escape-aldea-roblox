@@ -10,6 +10,7 @@ local BoundaryService = {}
 local ISLAND_CENTERS = {
 	Island1_Tropical = Vector3.new(400, 0, 0),
 	Island2_Frozen = Vector3.new(2800, 0, 0),
+	Island3_Desert = Vector3.new(5300, 0, 0),
 }
 local MAX_RADIUS = 620
 local WARN_RADIUS = 540

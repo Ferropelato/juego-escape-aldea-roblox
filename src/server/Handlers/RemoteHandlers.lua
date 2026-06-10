@@ -68,9 +68,11 @@ function RemoteHandlers.init()
 		end
 		data.currentIsland = islandId
 		data.currentChallenge = island.spawnZone
+		local AchievementService = require(script.Parent.Parent.Services.AchievementService)
 		if islandId == "Island2_Frozen" then
-			local AchievementService = require(script.Parent.Parent.Services.AchievementService)
 			AchievementService.grant(player, "FrozenArrival")
+		elseif islandId == "Island3_Desert" then
+			AchievementService.grant(player, "DesertArrival")
 		end
 		NotificationService.send(player, "Viajaste a: " .. island.displayName, "success")
 		SpawnService.spawnPlayer(player, false)

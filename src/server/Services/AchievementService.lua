@@ -57,6 +57,8 @@ function AchievementService.onChallengeCompleted(player: Player, challengeId: st
 		FinalEscape = "IslandEscape",
 		IceMaze = "IceMazeMaster",
 		FrozenEscape = "GlacierEscape",
+		SandTemple = "TempleRaider",
+		DuneEscape = "DesertLegend",
 	}
 	local achId = map[challengeId]
 	if achId then

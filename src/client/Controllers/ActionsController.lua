@@ -8,6 +8,24 @@ local PlayerDataController = require(script.Parent.PlayerDataController)
 local ActionsController = {}
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
+local ISLAND_ORDER = { "Island1_Tropical", "Island2_Frozen", "Island3_Desert" }
+
+local function getNextUnlockedIsland(data): string?
+	if not data or not data.unlockedIslands then
+		return nil
+	end
+
+	local currentIdx = table.find(ISLAND_ORDER, data.currentIsland) or 1
+	for offset = 1, #ISLAND_ORDER do
+		local idx = ((currentIdx - 1 + offset) % #ISLAND_ORDER) + 1
+		local islandId = ISLAND_ORDER[idx]
+		if data.unlockedIslands[islandId] and islandId ~= data.currentIsland then
+			return islandId
+		end
+	end
+	return nil
+end
+
 function ActionsController.refreshIslandButton()
 	local refs = HudBuilder.getRefs() or HudBuilder.ensure()
 	local btn = refs.islandButton
@@ -16,16 +34,7 @@ function ActionsController.refreshIslandButton()
 	end
 
 	local data = PlayerDataController.get()
-	local hasUnlocked = false
-	if data and data.unlockedIslands then
-		for islandId, unlocked in data.unlockedIslands do
-			if unlocked and islandId ~= data.currentIsland then
-				hasUnlocked = true
-				break
-			end
-		end
-	end
-	btn.Visible = hasUnlocked
+	btn.Visible = getNextUnlockedIsland(data) ~= nil
 end
 
 function ActionsController.init()
@@ -43,14 +52,9 @@ function ActionsController.init()
 			if not data then
 				return
 			end
-			for islandId, unlocked in data.unlockedIslands do
-				if unlocked and islandId ~= data.currentIsland then
-					local island = GameConfig.getIsland(islandId)
-					if island then
-						Remotes.SelectIsland:FireServer(islandId)
-						return
-					end
-				end
+			local nextIsland = getNextUnlockedIsland(data)
+			if nextIsland then
+				Remotes.SelectIsland:FireServer(nextIsland)
 			end
 		end)
 	end
