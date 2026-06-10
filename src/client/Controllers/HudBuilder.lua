@@ -21,6 +21,15 @@ export type HudRefs = {
 	craftButton: TextButton,
 	respawnButton: TextButton,
 	islandButton: TextButton,
+	achievementButton: TextButton,
+	achievementPanel: Frame,
+	achievementList: ScrollingFrame,
+	achievementCount: TextLabel?,
+	onboardingBanner: Frame,
+	onboardingTitle: TextLabel,
+	onboardingText: TextLabel,
+	onboardingStep: TextLabel?,
+	onboardingDismiss: TextButton?,
 }
 
 function HudBuilder.getRefs(): HudRefs?
@@ -45,6 +54,15 @@ function HudBuilder.getRefs(): HudRefs?
 		craftButton = main:FindFirstChild("CraftButton") :: TextButton,
 		respawnButton = main:FindFirstChild("RespawnButton") :: TextButton,
 		islandButton = main:FindFirstChild("IslandButton") :: TextButton,
+		achievementButton = main:FindFirstChild("AchievementButton") :: TextButton,
+		achievementPanel = gui:FindFirstChild("AchievementPanel") :: Frame,
+		achievementList = gui:FindFirstChild("AchievementPanel") and gui.AchievementPanel:FindFirstChild("AchievementList") :: ScrollingFrame,
+		achievementCount = main:FindFirstChild("AchievementCount") :: TextLabel,
+		onboardingBanner = gui:FindFirstChild("OnboardingBanner") :: Frame,
+		onboardingTitle = gui:FindFirstChild("OnboardingBanner") and gui.OnboardingBanner:FindFirstChild("Title") :: TextLabel,
+		onboardingText = gui:FindFirstChild("OnboardingBanner") and gui.OnboardingBanner:FindFirstChild("Text") :: TextLabel,
+		onboardingStep = gui:FindFirstChild("OnboardingBanner") and gui.OnboardingBanner:FindFirstChild("StepLabel") :: TextLabel,
+		onboardingDismiss = gui:FindFirstChild("OnboardingBanner") and gui.OnboardingBanner:FindFirstChild("Dismiss") :: TextButton,
 	}
 end
 
@@ -76,7 +94,7 @@ function HudBuilder.ensure(): HudRefs
 
 	local main = Instance.new("Frame")
 	main.Name = "MainHUD"
-	main.Size = UDim2.new(0, 300, 0, 300)
+	main.Size = UDim2.new(0, 300, 0, 332)
 	main.Position = UDim2.new(0, 12, 0, 12)
 	main.BackgroundColor3 = Color3.fromRGB(18, 22, 28)
 	main.BackgroundTransparency = 0.08
@@ -191,6 +209,22 @@ function HudBuilder.ensure(): HudRefs
 	local islandBtn = actionButton("IslandButton", "🏝 Isla", 194, Color3.fromRGB(55, 100, 70))
 	islandBtn.Visible = false
 
+	local achBtn = actionButton("AchievementButton", "🏆 Logros", 6, Color3.fromRGB(90, 70, 30))
+	achBtn.Position = UDim2.new(0, 6, 0, 296)
+
+	local achCount = Instance.new("TextLabel")
+	achCount.Name = "AchievementCount"
+	achCount.Size = UDim2.new(0, 88, 0, 28)
+	achCount.Position = UDim2.new(0, 100, 0, 296)
+	achCount.BackgroundColor3 = Color3.fromRGB(35, 38, 45)
+	achCount.BorderSizePixel = 0
+	achCount.Text = "0/10"
+	achCount.TextColor3 = Color3.fromRGB(255, 220, 100)
+	achCount.Font = Enum.Font.GothamBold
+	achCount.TextSize = 12
+	achCount.Parent = main
+	corner(achCount, 6)
+
 	local notifContainer = Instance.new("Frame")
 	notifContainer.Name = "NotificationContainer"
 	notifContainer.Size = UDim2.new(0.5, 0, 0, 200)
@@ -246,6 +280,113 @@ function HudBuilder.ensure(): HudRefs
 	recipeScroll.Parent = craftPanel
 	corner(recipeScroll, 6)
 
+	local achPanel = Instance.new("Frame")
+	achPanel.Name = "AchievementPanel"
+	achPanel.Visible = false
+	achPanel.Size = UDim2.new(0, 300, 0, 360)
+	achPanel.Position = UDim2.new(0, 12, 0, 350)
+	achPanel.BackgroundColor3 = Color3.fromRGB(25, 28, 36)
+	achPanel.BackgroundTransparency = 0.08
+	achPanel.BorderSizePixel = 0
+	achPanel.Parent = gui
+	corner(achPanel, 10)
+
+	local achTitle = Instance.new("TextLabel")
+	achTitle.Name = "Title"
+	achTitle.Size = UDim2.new(1, -12, 0, 32)
+	achTitle.Position = UDim2.new(0, 6, 0, 6)
+	achTitle.BackgroundTransparency = 1
+	achTitle.Text = "🏆 Logros"
+	achTitle.TextColor3 = Color3.fromRGB(255, 220, 120)
+	achTitle.Font = Enum.Font.GothamBold
+	achTitle.TextSize = 18
+	achTitle.TextXAlignment = Enum.TextXAlignment.Left
+	achTitle.Parent = achPanel
+
+	local achClose = Instance.new("TextButton")
+	achClose.Name = "CloseButton"
+	achClose.Size = UDim2.new(0, 28, 0, 28)
+	achClose.Position = UDim2.new(1, -34, 0, 6)
+	achClose.BackgroundColor3 = Color3.fromRGB(80, 40, 40)
+	achClose.BorderSizePixel = 0
+	achClose.Text = "✕"
+	achClose.TextColor3 = Color3.new(1, 1, 1)
+	achClose.Font = Enum.Font.GothamBold
+	achClose.TextSize = 14
+	achClose.Parent = achPanel
+	corner(achClose, 6)
+
+	local achScroll = Instance.new("ScrollingFrame")
+	achScroll.Name = "AchievementList"
+	achScroll.Size = UDim2.new(1, -12, 1, -44)
+	achScroll.Position = UDim2.new(0, 6, 0, 38)
+	achScroll.BackgroundColor3 = Color3.fromRGB(12, 14, 18)
+	achScroll.BackgroundTransparency = 0.1
+	achScroll.BorderSizePixel = 0
+	achScroll.ScrollBarThickness = 6
+	achScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+	achScroll.Parent = achPanel
+	corner(achScroll, 6)
+
+	local onboardBanner = Instance.new("Frame")
+	onboardBanner.Name = "OnboardingBanner"
+	onboardBanner.Visible = false
+	onboardBanner.Size = UDim2.new(0, 420, 0, 72)
+	onboardBanner.Position = UDim2.new(0.5, -210, 1, -90)
+	onboardBanner.BackgroundColor3 = Color3.fromRGB(20, 35, 55)
+	onboardBanner.BackgroundTransparency = 0.1
+	onboardBanner.BorderSizePixel = 0
+	onboardBanner.Parent = gui
+	corner(onboardBanner, 10)
+
+	local onboardTitle = Instance.new("TextLabel")
+	onboardTitle.Name = "Title"
+	onboardTitle.Size = UDim2.new(1, -80, 0, 24)
+	onboardTitle.Position = UDim2.new(0, 12, 0, 8)
+	onboardTitle.BackgroundTransparency = 1
+	onboardTitle.Text = "Tutorial"
+	onboardTitle.TextColor3 = Color3.fromRGB(255, 230, 140)
+	onboardTitle.Font = Enum.Font.GothamBold
+	onboardTitle.TextSize = 16
+	onboardTitle.TextXAlignment = Enum.TextXAlignment.Left
+	onboardTitle.Parent = onboardBanner
+
+	local onboardStep = Instance.new("TextLabel")
+	onboardStep.Name = "StepLabel"
+	onboardStep.Size = UDim2.new(0, 70, 0, 20)
+	onboardStep.Position = UDim2.new(1, -78, 0, 10)
+	onboardStep.BackgroundTransparency = 1
+	onboardStep.Text = "Paso 1/5"
+	onboardStep.TextColor3 = Color3.fromRGB(180, 200, 220)
+	onboardStep.Font = Enum.Font.Gotham
+	onboardStep.TextSize = 11
+	onboardStep.TextXAlignment = Enum.TextXAlignment.Right
+	onboardStep.Parent = onboardBanner
+
+	local onboardText = Instance.new("TextLabel")
+	onboardText.Name = "Text"
+	onboardText.Size = UDim2.new(1, -24, 0, 32)
+	onboardText.Position = UDim2.new(0, 12, 0, 32)
+	onboardText.BackgroundTransparency = 1
+	onboardText.Text = ""
+	onboardText.TextColor3 = Color3.new(1, 1, 1)
+	onboardText.Font = Enum.Font.Gotham
+	onboardText.TextSize = 13
+	onboardText.TextWrapped = true
+	onboardText.TextXAlignment = Enum.TextXAlignment.Left
+	onboardText.Parent = onboardBanner
+
+	local onboardDismiss = Instance.new("TextButton")
+	onboardDismiss.Name = "Dismiss"
+	onboardDismiss.Size = UDim2.new(0, 24, 0, 24)
+	onboardDismiss.Position = UDim2.new(1, -32, 0, 8)
+	onboardDismiss.BackgroundTransparency = 1
+	onboardDismiss.Text = "✕"
+	onboardDismiss.TextColor3 = Color3.fromRGB(200, 200, 200)
+	onboardDismiss.Font = Enum.Font.GothamBold
+	onboardDismiss.TextSize = 14
+	onboardDismiss.Parent = onboardBanner
+
 	return {
 		screenGui = gui,
 		mainHud = main,
@@ -259,6 +400,15 @@ function HudBuilder.ensure(): HudRefs
 		craftButton = craftBtn,
 		respawnButton = respawnBtn,
 		islandButton = islandBtn,
+		achievementButton = achBtn,
+		achievementPanel = achPanel,
+		achievementList = achScroll,
+		achievementCount = achCount,
+		onboardingBanner = onboardBanner,
+		onboardingTitle = onboardTitle,
+		onboardingText = onboardText,
+		onboardingStep = onboardStep,
+		onboardingDismiss = onboardDismiss,
 	}
 end
 

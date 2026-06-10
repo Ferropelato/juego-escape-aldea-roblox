@@ -44,6 +44,11 @@ function CraftingService.craft(player: Player, recipeId: string): (boolean, stri
 		ChallengeService.unlockChallengeGate(player, recipe.unlocksChallenge)
 	end
 
+	local AchievementService = require(script.Parent.AchievementService)
+	local OnboardingService = require(script.Parent.OnboardingService)
+	AchievementService.onCrafted(player)
+	OnboardingService.onCrafted(player)
+
 	return true, recipe.displayName
 end
 

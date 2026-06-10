@@ -81,6 +81,8 @@ function ObjectiveService.syncObjectives(player: Player)
 	local status = ObjectiveService.buildStatus(player, challengeId)
 	if status then
 		Remotes.SyncObjectives:FireClient(player, status)
+		local OnboardingService = require(script.Parent.OnboardingService)
+		OnboardingService.onObjectivesSynced(player)
 	end
 end
 
@@ -102,12 +104,20 @@ end
 function ObjectiveService.onSignRead(player: Player, signIndex: number)
 	local data = DataService.get(player)
 	local challengeId = data.currentChallenge
-	if challengeId ~= "JungleMaze" then
-		return
-	end
 
 	local objectives = ObjectiveService.getObjectives(challengeId)
 	if not objectives then
+		return
+	end
+
+	local hasSigns = false
+	for _, obj in objectives do
+		if obj.type == "signs" then
+			hasSigns = true
+			break
+		end
+	end
+	if not hasSigns then
 		return
 	end
 
@@ -119,7 +129,17 @@ function ObjectiveService.onSignRead(player: Player, signIndex: number)
 	end
 
 	prog.signsRead = signIndex
-	NotificationService.send(player, "Señal " .. signIndex .. " ✓ — seguí al " .. (signIndex + 1), "success")
+	local maxSigns = 5
+	for _, obj in objectives do
+		if obj.type == "signs" then
+			maxSigns = obj.amount or 5
+		end
+	end
+	if signIndex < maxSigns then
+		NotificationService.send(player, "Señal " .. signIndex .. " ✓ — seguí al " .. (signIndex + 1), "success")
+	else
+		NotificationService.send(player, "Señal " .. signIndex .. " ✓ — ¡última señal!", "success")
+	end
 	ObjectiveService.syncObjectives(player)
 	ObjectiveService.tryCompleteChallenge(player, challengeId)
 end
@@ -145,12 +165,10 @@ function ObjectiveService.tryCompleteChallenge(player: Player, challengeId: stri
 		return
 	end
 
-	local ok, name = ChallengeService.completeChallenge(player, challengeId)
+	local ok, name = ChallengeService.completeAndSync(player, challengeId)
 	if ok then
 		NotificationService.send(player, "¡Zona completada: " .. name .. "! El puente se abrió →", "success")
 		ChallengeService.updateGatesForPlayer(player)
-		ObjectiveService.syncObjectives(player)
-		ChallengeService.syncToClient(player)
 	end
 end
 

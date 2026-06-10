@@ -1409,4 +1409,127 @@ function PropGenerator.island1Landscape(islandFolder: Folder, offset: Vector3, l
 	return landscape
 end
 
+-- ─── Laberinto de hielo (más compacto, 3 señales) ───────────────
+local ICE_SOLUTION_PATH = {
+	{ 2, 2 }, { 3, 2 }, { 4, 2 }, { 5, 2 }, { 6, 2 },
+	{ 6, 3 }, { 6, 4 }, { 7, 4 }, { 8, 4 }, { 8, 5 },
+	{ 8, 6 }, { 9, 6 }, { 10, 6 }, { 11, 6 }, { 12, 6 },
+}
+local ICE_SIGN_INDEX = { [1] = 1, [5] = 2, [10] = 3 }
+
+function PropGenerator.iceMazeWalls(parent: Instance, center: Vector3, groundY: number?)
+	local model = folder(parent, "IceMazeStructure")
+	local floorY = groundY or center.Y
+	local cell = 10
+	local wallH = 18
+	local cols = 14
+	local rows = 8
+	local origin = center + Vector3.new(-cols * cell / 2, 0, -rows * cell / 2)
+	local iceColor = Color3.fromRGB(180, 220, 255)
+	local wallMat = Enum.Material.Ice
+
+	local grid: { { number } } = {}
+	for x = 1, cols do
+		grid[x] = {}
+		for z = 1, rows do
+			grid[x][z] = 1
+		end
+	end
+
+	for _, p in ICE_SOLUTION_PATH do
+		grid[p[1]][p[2]] = 0
+	end
+
+	local function cellWorld(cx: number, cz: number): Vector3
+		return origin + Vector3.new((cx - 0.5) * cell, 0, (cz - 0.5) * cell)
+	end
+
+	for x = 1, cols do
+		for z = 1, rows do
+			local pos = cellWorld(x, z)
+			part({
+				name = "IceFloor",
+				size = Vector3.new(cell - 0.5, 0.5, cell - 0.5),
+				position = Vector3.new(pos.X, floorY - 0.2, pos.Z),
+				color = iceColor,
+				material = Enum.Material.Ice,
+				parent = model,
+			})
+			if grid[x][z] == 1 then
+				part({
+					name = "IceWall",
+					size = Vector3.new(cell - 1, wallH, cell - 1),
+					position = Vector3.new(pos.X, floorY + wallH / 2, pos.Z),
+					color = Color3.fromRGB(140, 190, 240),
+					material = wallMat,
+					parent = model,
+				})
+			end
+		end
+	end
+
+	local signSpots = {}
+	for i, p in ICE_SOLUTION_PATH do
+		local pos = cellWorld(p[1], p[2])
+		local signNum = ICE_SIGN_INDEX[i]
+		if signNum then
+			table.insert(signSpots, { position = pos + Vector3.new(0, 2, 0), number = signNum })
+		end
+	end
+
+	local finishPos = cellWorld(12, 6) + Vector3.new(0, 3, 0)
+	local exitPos = cellWorld(11, 6) + Vector3.new(0, 3, 0)
+
+	part({
+		name = "MazeEntranceArch",
+		size = Vector3.new(2, wallH + 2, cell + 2),
+		position = Vector3.new(origin.X - 1, floorY + wallH / 2, origin.Z + 1.5 * cell),
+		color = Color3.fromRGB(160, 200, 240),
+		material = Enum.Material.Ice,
+		parent = model,
+		canCollide = false,
+		transparency = 0.5,
+	})
+
+	return model, signSpots, exitPos, finishPos
+end
+
+function PropGenerator.island2Landscape(islandFolder: Folder, offset: Vector3, layout: { [string]: Vector3 })
+	local landscape = folder(islandFolder, "Landscape")
+	local rand = rng(20001)
+
+	for i = 1, 12 do
+		local angle = rand(0, math.pi * 2)
+		local dist = rand(80, 280)
+		part({
+			name = "Iceberg",
+			size = Vector3.new(rand(15, 40), rand(8, 25), rand(15, 40)),
+			position = offset + Vector3.new(math.cos(angle) * dist, rand(2, 8), math.sin(angle) * dist),
+			color = Color3.fromRGB(200, 230, 255),
+			material = Enum.Material.Ice,
+			parent = landscape,
+		})
+	end
+
+	PropGenerator.scatterRocks(landscape, offset + Vector3.new(300, 0, 0), 200, 25, "sand", 401)
+
+	local paths = {
+		{ layout.FrozenShore, layout.IceMaze },
+		{ layout.IceMaze, layout.FrozenEscape },
+	}
+	for i, path in paths do
+		part({
+			name = "SnowPath",
+			size = Vector3.new((path[2] - path[1]).Magnitude, 0.4, 8),
+			position = path[1]:Lerp(path[2], 0.5) + Vector3.new(0, 0.3, 0),
+			color = Color3.fromRGB(240, 245, 255),
+			material = Enum.Material.Snow,
+			parent = landscape,
+			cframe = CFrame.lookAt(path[1]:Lerp(path[2], 0.5), path[2]),
+		})
+	end
+
+	return landscape
+end
+
 return PropGenerator

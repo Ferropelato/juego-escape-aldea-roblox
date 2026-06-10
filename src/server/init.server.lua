@@ -21,6 +21,7 @@ local BoundaryService = require(script.Services.BoundaryService)
 local HazardService = require(script.Services.HazardService)
 local ZoneProgressionService = require(script.Services.ZoneProgressionService)
 local WildlifeService = require(script.Services.WildlifeService)
+local OnboardingService = require(script.Services.OnboardingService)
 
 print("[EscapeIsland] Iniciando servidor...")
 
@@ -69,6 +70,7 @@ Players.PlayerAdded:Connect(function(player)
 		ChallengeService.updateGatesForPlayer(player)
 		ChallengeService.syncToClient(player)
 		ObjectiveService.syncObjectives(player)
+		OnboardingService.onPlayerReady(player)
 	end)
 end)
 

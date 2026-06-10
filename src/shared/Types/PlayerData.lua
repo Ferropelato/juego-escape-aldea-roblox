@@ -3,6 +3,8 @@ export type CraftedItems = { [string]: boolean }
 export type CompletedChallenges = { [string]: boolean }
 export type UnlockedIslands = { [string]: boolean }
 
+export type Achievements = { [string]: boolean }
+
 export type PlayerSaveData = {
 	currentIsland: string,
 	currentChallenge: string,
@@ -12,6 +14,9 @@ export type PlayerSaveData = {
 	craftedItems: CraftedItems,
 	completedChallenges: CompletedChallenges,
 	unlockedIslands: UnlockedIslands,
+	achievements: Achievements,
+	onboardingStep: number,
+	onboardingDone: boolean,
 	totalPlayTime: number,
 }
 
@@ -31,6 +36,9 @@ function PlayerData.getDefault(): PlayerSaveData
 			Island2_Frozen = false,
 			Island3_Desert = false,
 		},
+		achievements = {},
+		onboardingStep = 0,
+		onboardingDone = false,
 		totalPlayTime = 0,
 	}
 end
@@ -46,6 +54,9 @@ function PlayerData.serializeForClient(data: PlayerSaveData)
 		craftedItems = data.craftedItems,
 		completedChallenges = data.completedChallenges,
 		unlockedIslands = data.unlockedIslands,
+		achievements = data.achievements,
+		onboardingStep = data.onboardingStep,
+		onboardingDone = data.onboardingDone,
 		totalPlayTime = data.totalPlayTime,
 	}
 end

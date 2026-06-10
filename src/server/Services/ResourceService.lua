@@ -55,6 +55,10 @@ function ResourceService.collect(player: Player, resourceId: string, amount: num
 	end
 
 	ObjectiveService.onResourceCollected(player, resourceId, amt)
+	local AchievementService = require(script.Parent.AchievementService)
+	local OnboardingService = require(script.Parent.OnboardingService)
+	AchievementService.onResourceCollected(player)
+	OnboardingService.onResourceCollected(player)
 	ChallengeService.syncToClient(player)
 	return true
 end

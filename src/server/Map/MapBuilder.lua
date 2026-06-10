@@ -30,6 +30,12 @@ local ZONE_LAYOUT_ISLAND1 = {
 	FinalEscape = ISLAND1_OFFSET + Vector3.new(750, 5, -50),
 }
 
+local ZONE_LAYOUT_ISLAND2 = {
+	FrozenShore = ISLAND2_OFFSET + Vector3.new(0, 5, 0),
+	IceMaze = ISLAND2_OFFSET + Vector3.new(200, 8, 120),
+	FrozenEscape = ISLAND2_OFFSET + Vector3.new(420, 12, 80),
+}
+
 local function makePart(props: {
 	name: string,
 	size: Vector3,
@@ -107,6 +113,9 @@ local ZONE_ENTRY_OFFSETS: { [string]: Vector3 } = {
 	VolcanoClimb = Vector3.new(0, 4, -48),
 	VolcanoInterior = Vector3.new(0, 12, -42),
 	FinalEscape = Vector3.new(0, 4, -40),
+	FrozenShore = Vector3.new(0, 4, 55),
+	IceMaze = Vector3.new(-70, 4, -50),
+	FrozenEscape = Vector3.new(-75, 4, -20),
 }
 
 local function createZoneEntry(parent: Instance, challenge, center: Vector3)
@@ -774,6 +783,168 @@ local function buildFinalZone(zoneFolder: Folder, center: Vector3, challenge)
 	createFinish(zoneFolder, center + Vector3.new(0, 5, 45))
 end
 
+-- ─── ZONAS ISLA 2 (helada) ─────────────────────────────────────
+
+local function buildFrozenShoreZone(zoneFolder: Folder, center: Vector3, challenge)
+	createZoneFloor(zoneFolder, center, Vector3.new(150, 0, 130))
+	createSpawn(zoneFolder, center)
+	createZoneBounds(zoneFolder, challenge, center)
+	local deco = PropGenerator.decoFolder(zoneFolder)
+
+	makePart({
+		name = "FrozenOcean",
+		size = Vector3.new(400, 8, 180),
+		position = center + Vector3.new(0, -3, -100),
+		color = Color3.fromRGB(80, 140, 200),
+		material = Enum.Material.Glass,
+		parent = zoneFolder,
+		transparency = 0.3,
+	})
+
+	makePart({
+		name = "SnowBeach",
+		size = Vector3.new(160, 3, 90),
+		color = Color3.fromRGB(235, 245, 255),
+		material = Enum.Material.Snow,
+		position = center + Vector3.new(0, 0, -35),
+		parent = zoneFolder,
+	})
+
+	for i = 1, 4 do
+		local icebergPos = center + Vector3.new(-50 + i * 25, 0, -20 + (i % 2) * 15)
+		makePart({
+			name = "Iceberg_" .. i,
+			size = Vector3.new(12 + i * 2, 8 + i, 10 + i),
+			position = icebergPos + Vector3.new(0, 4, 0),
+			color = Color3.fromRGB(180, 220, 255),
+			material = Enum.Material.Ice,
+			parent = deco,
+		})
+	end
+
+	createResourceNode(zoneFolder, "Crystal", center + Vector3.new(-30, 2, 10))
+	createResourceNode(zoneFolder, "Crystal", center + Vector3.new(25, 2, 20))
+	createResourceNode(zoneFolder, "Stone", center + Vector3.new(-15, 2, 35))
+	createResourceNode(zoneFolder, "Stone", center + Vector3.new(40, 2, 5))
+	createResourceNode(zoneFolder, "Wood", center + Vector3.new(-45, 2, 25))
+
+	createMissionBoard(zoneFolder, center + Vector3.new(-10, 6, 40), "❄️ Orilla helada", {
+		"Recolectá cristales y piedras heladas.",
+		"Fabricá el Piolet de hielo (🔨 Craft).",
+		"Cruzá el puente glacial con cuidado.",
+	})
+
+	createFinish(zoneFolder, center + Vector3.new(68, 3, 0))
+
+	local bridgeStart = center + Vector3.new(78, 4, 0)
+	local bridgeEnd = ZONE_LAYOUT_ISLAND2.IceMaze + Vector3.new(-70, 4, -50)
+	createWalkBridge(zoneFolder, "IceMaze", bridgeStart, bridgeEnd, 5)
+end
+
+local function buildIceMazeZone(zoneFolder: Folder, center: Vector3, challenge)
+	createZoneFloor(zoneFolder, center, Vector3.new(180, 0, 150))
+	createSpawn(zoneFolder, center + Vector3.new(-70, 0, -50))
+	createZoneBounds(zoneFolder, challenge, center)
+	local deco = PropGenerator.decoFolder(zoneFolder)
+
+	createMissionBoard(zoneFolder, center + Vector3.new(-72, 6, -62), "🧊 Laberinto de hielo", {
+		"Entrá por el arco oeste.",
+		"Seguí las señales 1 → 3 (pulsa E).",
+		"¡El suelo resbala! Caminá con cuidado.",
+		"Salí por el portal verde al este.",
+	})
+
+	local _, signSpots, _, mazeFinishPos = PropGenerator.iceMazeWalls(deco, center, center.Y + 0.25)
+
+	for _, spot in signSpots do
+		local signModel = PropGenerator.signPost(deco, spot.position, spot.number, "❄ " .. spot.number)
+		local board = signModel:FindFirstChild("Board", true)
+		if board then
+			local prompt = Instance.new("ProximityPrompt")
+			prompt.ActionText = "Leer señal"
+			prompt.ObjectText = "Señal " .. spot.number
+			prompt.HoldDuration = 0
+			prompt.MaxActivationDistance = 12
+			prompt.Parent = board
+			local signNum = spot.number
+			prompt.Triggered:Connect(function(player)
+				local PuzzleManager = require(script.Parent.Parent.Challenges.PuzzleManager)
+				PuzzleManager.handleInteraction(player, "MazeSign", signNum)
+			end)
+		end
+	end
+
+	createResourceNode(zoneFolder, "Crystal", center + Vector3.new(-20, 3, 40))
+	createResourceNode(zoneFolder, "Vine", center + Vector3.new(30, 3, -30))
+
+	local finishPos = mazeFinishPos or (center + Vector3.new(70, 3, 30))
+	createFinish(zoneFolder, finishPos)
+
+	createGate(zoneFolder, challenge.id, center + Vector3.new(-75, 6, -50), Vector3.new(14, 12, 3))
+
+	local bridgeStart = finishPos + Vector3.new(12, 1, 0)
+	local bridgeEnd = ZONE_LAYOUT_ISLAND2.FrozenEscape + Vector3.new(-75, 4, -20)
+	createWalkBridge(zoneFolder, "FrozenEscape", bridgeStart, bridgeEnd, 5)
+end
+
+local function buildFrozenEscapeZone(zoneFolder: Folder, center: Vector3, challenge)
+	createZoneFloor(zoneFolder, center, Vector3.new(200, 0, 220))
+	createSpawn(zoneFolder, center + Vector3.new(-75, 0, 0))
+	createZoneBounds(zoneFolder, challenge, center)
+	local deco = PropGenerator.decoFolder(zoneFolder)
+
+	createMissionBoard(zoneFolder, center + Vector3.new(-72, 6, -10), "🏔️ Escape del glaciar", {
+		"¡Un yeti te persigue!",
+		"Corré hasta la zona VERDE segura.",
+		"Fabricá el Bote de hielo antes de entrar.",
+	})
+
+	for i = 1, 8 do
+		makePart({
+			name = "IceSpire",
+			size = Vector3.new(4, 8 + (i % 4) * 2, 4),
+			position = center + Vector3.new(-60 + i * 18, 4, math.sin(i) * 30),
+			color = Color3.fromRGB(160, 210, 250),
+			material = Enum.Material.Ice,
+			parent = deco,
+		})
+	end
+
+	PropGenerator.dirtPath(deco, center + Vector3.new(-70, 0.5, 0), center + Vector3.new(100, 0.5, 0), 10, 801)
+
+	makePart({
+		name = "ChaseGuard",
+		size = Vector3.new(6, 8, 6),
+		position = center + Vector3.new(-55, 5, 15),
+		color = Color3.fromRGB(80, 120, 180),
+		material = Enum.Material.Ice,
+		parent = zoneFolder,
+	})
+
+	makePart({
+		name = "SafeZone",
+		size = Vector3.new(30, 2, 30),
+		position = center + Vector3.new(95, 1, 0),
+		color = Color3.fromRGB(0, 255, 120),
+		material = Enum.Material.Neon,
+		parent = zoneFolder,
+		transparency = 0.5,
+		canCollide = false,
+	})
+
+	createGate(zoneFolder, challenge.id, center + Vector3.new(-78, 6, 0), Vector3.new(14, 12, 3))
+	createFinish(zoneFolder, center + Vector3.new(110, 4, 0))
+
+	makePart({
+		name = "EscapeBoatHull",
+		size = Vector3.new(14, 4, 22),
+		position = center + Vector3.new(105, 3, 30),
+		color = Color3.fromRGB(180, 220, 255),
+		material = Enum.Material.Ice,
+		parent = deco,
+	})
+end
+
 local BUILDERS = {
 	BeachLanding = buildBeachZone,
 	JungleMaze = buildJungleZone,
@@ -787,6 +958,9 @@ local BUILDERS = {
 	VolcanoClimb = buildVolcanoZone,
 	VolcanoInterior = buildVolcanoInterior,
 	FinalEscape = buildFinalZone,
+	FrozenShore = buildFrozenShoreZone,
+	IceMaze = buildIceMazeZone,
+	FrozenEscape = buildFrozenEscapeZone,
 }
 
 -- Sin billboards gigantes en el mundo (el cliente muestra zona actual arriba)
@@ -824,12 +998,37 @@ local function buildIsland1Base(islandFolder: Folder, offset: Vector3)
 	PropGenerator.island1Landscape(islandFolder, offset, ZONE_LAYOUT_ISLAND1)
 end
 
+local function buildIsland2Base(islandFolder: Folder, offset: Vector3)
+	makePart({
+		name = "IslandBase",
+		size = Vector3.new(700, 20, 700),
+		position = offset + Vector3.new(300, -6, 0),
+		color = Color3.fromRGB(200, 220, 240),
+		material = Enum.Material.Snow,
+		parent = islandFolder,
+	})
+
+	makePart({
+		name = "FrozenLake",
+		size = Vector3.new(120, 4, 80),
+		position = offset + Vector3.new(150, -2, -80),
+		color = Color3.fromRGB(100, 160, 220),
+		material = Enum.Material.Ice,
+		parent = islandFolder,
+		transparency = 0.2,
+	})
+
+	PropGenerator.island2Landscape(islandFolder, offset, ZONE_LAYOUT_ISLAND2)
+end
+
 local function buildIsland(islandId: string, offset: Vector3)
 	local islandFolder = Instance.new("Folder")
 	islandFolder.Name = islandId
 
 	if islandId == "Island1_Tropical" then
 		buildIsland1Base(islandFolder, offset)
+	elseif islandId == "Island2_Frozen" then
+		buildIsland2Base(islandFolder, offset)
 	else
 		makePart({
 			name = "IslandBase",
@@ -845,12 +1044,11 @@ local function buildIsland(islandId: string, offset: Vector3)
 	zonesFolder.Name = "Zones"
 	zonesFolder.Parent = islandFolder
 
+	local zoneLayout = if islandId == "Island2_Frozen" then ZONE_LAYOUT_ISLAND2 else ZONE_LAYOUT_ISLAND1
+
 	local challenges = GameConfig.getChallengesForIsland(islandId)
 	for _, challenge in challenges do
-		local layout = ZONE_LAYOUT_ISLAND1[challenge.id]
-		if not layout and islandId == "Island2_Frozen" then
-			layout = offset + Vector3.new(challenge.order * 80, 5, 0)
-		end
+		local layout = zoneLayout[challenge.id]
 		if not layout then
 			continue
 		end
@@ -871,7 +1069,7 @@ local function buildIsland(islandId: string, offset: Vector3)
 			createZoneBounds(zoneFolder, challenge, layout)
 		end
 		-- JungleMaze y RiverCross registran entrada al final del puente
-		if challenge.id ~= "JungleMaze" and challenge.id ~= "RiverCross" then
+		if challenge.id ~= "JungleMaze" and challenge.id ~= "RiverCross" and challenge.id ~= "IceMaze" then
 			createZoneEntry(zoneFolder, challenge, layout)
 		end
 
@@ -895,14 +1093,6 @@ function MapBuilder.build()
 	island1.Parent = map
 
 	local island2 = buildIsland("Island2_Frozen", ISLAND2_OFFSET)
-	makePart({
-		name = "FrozenGround",
-		size = Vector3.new(600, 15, 600),
-		position = ISLAND2_OFFSET + Vector3.new(300, 0, 0),
-		color = Color3.fromRGB(220, 240, 255),
-		material = Enum.Material.Snow,
-		parent = island2,
-	})
 	island2.Parent = map
 
 	map.Parent = Workspace

@@ -113,6 +113,10 @@ function ChallengeService.completeAndSync(player: Player, challengeId: string): 
 		ChallengeService.syncToClient(player)
 		local ObjectiveService = require(script.Parent.ObjectiveService)
 		ObjectiveService.syncObjectives(player)
+		local AchievementService = require(script.Parent.AchievementService)
+		local OnboardingService = require(script.Parent.OnboardingService)
+		AchievementService.onChallengeCompleted(player, challengeId)
+		OnboardingService.onChallengeCompleted(player)
 	end
 	return ok, name
 end
