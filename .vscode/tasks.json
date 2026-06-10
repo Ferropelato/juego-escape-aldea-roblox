@@ -1,0 +1,37 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Escape Island: Rojo Serve (libera 34872)",
+      "type": "shell",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"${workspaceFolder}/iniciar-rojo.ps1\"",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "rojo",
+        "pattern": { "regexp": "^(.*)$", "message": 1 },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Rojo server listening",
+          "endsPattern": "Rojo server listening"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "rojo-escape-island"
+      }
+    },
+    {
+      "label": "Escape Island: Rojo Build",
+      "type": "shell",
+      "command": "rojo build -o EscapeIsland.rbxlx",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "files.associations": {
+    "*.luau": "luau"
+  },
+  "rojo.projectFile": "default.project.json",
+  "rojo.port": 34872,
+  "luau-lsp.sourcemap.enabled": true,
+  "luau-lsp.sourcemap.autogenerate": true,
+  "luau-lsp.sourcemap.rojoProjectFile": "default.project.json",
+  "luau-lsp.sourcemap.sourcemapFile": "sourcemap.json"
+}

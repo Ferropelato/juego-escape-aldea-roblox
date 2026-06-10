@@ -1,0 +1,13 @@
+{
+  "className": "TextButton",
+  "properties": {
+    "Name": "CraftButton",
+    "Size": [[0, 80], [0, 28]],
+    "Position": [[0, 5], [0, 175]],
+    "BackgroundColor3": [0.2, 0.45, 0.7],
+    "Text": "Craftear",
+    "TextColor3": [1, 1, 1],
+    "Font": "GothamBold",
+    "TextSize": 14
+  }
+}

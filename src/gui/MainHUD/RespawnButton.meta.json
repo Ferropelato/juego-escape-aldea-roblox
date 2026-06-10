@@ -1,0 +1,13 @@
+{
+  "className": "TextButton",
+  "properties": {
+    "Name": "RespawnButton",
+    "Size": [[0, 80], [0, 28]],
+    "Position": [[0, 95], [0, 175]],
+    "BackgroundColor3": [0.6, 0.25, 0.2],
+    "Text": "Checkpoint",
+    "TextColor3": [1, 1, 1],
+    "Font": "GothamBold",
+    "TextSize": 12
+  }
+}

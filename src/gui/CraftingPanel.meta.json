@@ -1,0 +1,12 @@
+{
+  "className": "Frame",
+  "properties": {
+    "Name": "CraftingPanel",
+    "Visible": false,
+    "Size": [[0, 320], [0, 400]],
+    "Position": [[1, -332], [0, 12]],
+    "BackgroundColor3": [0.1, 0.1, 0.14],
+    "BackgroundTransparency": 0.1,
+    "BorderSizePixel": 0
+  }
+}

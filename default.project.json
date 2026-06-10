@@ -1,0 +1,60 @@
+{
+  "name": "EscapeIsland",
+  "servePort": 34872,
+  "serveAddress": "127.0.0.1",
+  "globIgnorePaths": ["**/*.md"],
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Shared": {
+        "$path": "src/shared"
+      },
+      "Remotes": {
+        "$path": "src/remotes"
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "Server": {
+        "$path": "src/server"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "Client": {
+          "$path": "src/client"
+        }
+      }
+    },
+    "StarterGui": {
+      "$className": "StarterGui",
+      "GameUI": {
+        "$path": "src/gui"
+      }
+    },
+    "ServerStorage": {
+      "$className": "ServerStorage",
+      "ChallengeTemplates": {
+        "$path": "src/serverstorage"
+      }
+    },
+    "SoundService": {
+      "$className": "SoundService",
+      "$properties": {
+        "AmbientReverb": "Forest"
+      }
+    },
+    "Lighting": {
+      "$className": "Lighting",
+      "$properties": {
+        "ClockTime": 14,
+        "GeographicLatitude": 15,
+        "Brightness": 2.5,
+        "OutdoorAmbient": [0.35, 0.45, 0.35]
+      }
+    }
+  }
+}

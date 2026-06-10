@@ -1,0 +1,22 @@
+local PlayerDataController = require(script.Controllers.PlayerDataController)
+local NotificationController = require(script.Controllers.NotificationController)
+local UIController = require(script.Controllers.UIController)
+local WaterController = require(script.Controllers.WaterController)
+local ObjectiveController = require(script.Controllers.ObjectiveController)
+local ZoneDisplayController = require(script.Controllers.ZoneDisplayController)
+local CraftingController = require(script.Controllers.CraftingController)
+local ActionsController = require(script.Controllers.ActionsController)
+
+print("[EscapeIsland] Cliente iniciado")
+
+local HudBuilder = require(script.Controllers.HudBuilder)
+
+HudBuilder.ensure()
+PlayerDataController.init()
+NotificationController.init()
+ObjectiveController.init()
+UIController.init()
+CraftingController.init()
+ActionsController.init()
+ZoneDisplayController.init()
+WaterController.init()

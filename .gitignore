@@ -1,0 +1,9 @@
+*.rbxl
+*.rbxlx
+*.rbxl.lock
+*.rbxm
+*.rbxmx
+sourcemap.json
+Packages/
+node_modules/
+.DS_Store
