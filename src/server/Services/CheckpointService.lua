@@ -7,6 +7,8 @@ local GameConfig = require(Shared.Config.GameConfig)
 local DataService = require(script.Parent.DataService)
 
 local CheckpointService = {}
+-- Throttle: no notificar más de 1 vez por cada 5s por jugador
+local _lastNotified: { [number]: number } = {}
 
 function CheckpointService.saveCheckpoint(player: Player, checkpointId: string, position: Vector3?, challengeId: string?)
 	local data = DataService.get(player)
@@ -24,9 +26,23 @@ function CheckpointService.saveCheckpoint(player: Player, checkpointId: string, 
 		end
 	end
 
+	local changed = data.lastCheckpoint ~= checkpointId
 	data.lastCheckpoint = checkpointId
 	data.lastCheckpointPosition = position
 	-- currentChallenge solo cambia al completar objetivos, no al tocar checkpoints
+
+	-- Notificar al jugador (throttle 5s para no spam)
+	if changed then
+		local now = tick()
+		local uid = player.UserId
+		if not _lastNotified[uid] or now - _lastNotified[uid] >= 5 then
+			_lastNotified[uid] = now
+			local NotificationService = require(script.Parent.NotificationService)
+			local challenge = challengeId and GameConfig.getChallenge(challengeId)
+			local zoneName = challenge and challenge.displayName or checkpointId
+			NotificationService.send(player, "✅ Progreso guardado en: " .. zoneName, "info")
+		end
+	end
 end
 
 function CheckpointService.getSpawnCFrame(player: Player): CFrame?
@@ -114,5 +130,9 @@ function CheckpointService.bindCheckpointParts()
 		end
 	end
 end
+
+game:GetService("Players").PlayerRemoving:Connect(function(player)
+	_lastNotified[player.UserId] = nil
+end)
 
 return CheckpointService

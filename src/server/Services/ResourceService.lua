@@ -14,13 +14,29 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local ResourceService = {}
 local RESOURCE_TAG = "ResourcePickup"
 local COOLDOWN: { [string]: number } = {}
+local COOLDOWN_TTL = 2 -- segundos antes de que una entrada expire
+local _cooldownSize = 0
+local _lastCooldownClean = 0
+
+local function cleanExpiredCooldowns()
+	local now = tick()
+	if now - _lastCooldownClean < 10 then return end -- limpiar cada 10s máximo
+	_lastCooldownClean = now
+	for k, t in COOLDOWN do
+		if now - t > COOLDOWN_TTL then
+			COOLDOWN[k] = nil
+		end
+	end
+end
 
 function ResourceService.collect(player: Player, resourceId: string, amount: number?, sourcePart: BasePart?)
 	local key = player.UserId .. "_" .. (sourcePart and sourcePart:GetFullName() or resourceId)
-	if COOLDOWN[key] and tick() - COOLDOWN[key] < 0.4 then
+	local now = tick()
+	if COOLDOWN[key] and now - COOLDOWN[key] < 0.4 then
 		return false
 	end
-	COOLDOWN[key] = tick()
+	COOLDOWN[key] = now
+	cleanExpiredCooldowns()
 
 	if not GameConfig.Resources[resourceId] then
 		return false

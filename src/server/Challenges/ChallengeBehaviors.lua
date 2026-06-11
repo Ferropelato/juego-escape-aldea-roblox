@@ -74,21 +74,36 @@ function ChallengeBehaviors.startChase(zoneFolder: Folder, challengeId: string)
 
 	local speed = GameConfig.DifficultyScaling.chaseSpeed(challenge.order)
 	local safeZone = zoneFolder:FindFirstChild("SafeZone") :: BasePart?
+	-- Cooldown de daño por jugador para no spamear 60 hits/s
+	local damageCooldown: { [number]: number } = {}
 
-	RunService.Heartbeat:Connect(function(dt)
+	local conn
+	conn = RunService.Heartbeat:Connect(function(dt)
+		-- Auto-desconectar si la zona fue destruida
+		if not zoneFolder.Parent then
+			conn:Disconnect()
+			return
+		end
+
+		local now = tick()
 		for _, player in getPlayersInActiveChallenge(zoneBounds, challengeId) do
 			local char = player.Character
 			local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
 			local hum = char and char:FindFirstChild("Humanoid") :: Humanoid?
-				if hrp and hum and hum.Health > 0 then
+			if hrp and hum and hum.Health > 0 then
 				local dir = (hrp.Position - guard.Position)
 				if dir.Magnitude > 0.1 then
 					dir = dir.Unit
 					guard.Position += Vector3.new(dir.X, 0, dir.Z) * speed * dt
 				end
 
+				-- Daño con cooldown de 0.5s por jugador
+				local uid = player.UserId
 				if (hrp.Position - guard.Position).Magnitude < 5 then
-					hum:TakeDamage(25 * GameConfig.DifficultyScaling.damageMultiplier(challenge.order))
+					if not damageCooldown[uid] or now - damageCooldown[uid] >= 0.5 then
+						damageCooldown[uid] = now
+						hum:TakeDamage(25 * GameConfig.DifficultyScaling.damageMultiplier(challenge.order))
+					end
 				end
 
 				if safeZone then
@@ -116,6 +131,7 @@ function ChallengeBehaviors.startDodge(zone: BasePart, challengeId: string)
 	end
 
 	local interval = GameConfig.DifficultyScaling.dodgeInterval(challenge.order)
+	local dmgPerHit = 15 * GameConfig.DifficultyScaling.damageMultiplier(challenge.order)
 
 	task.spawn(function()
 		while zone.Parent do
@@ -137,16 +153,23 @@ function ChallengeBehaviors.startDodge(zone: BasePart, challengeId: string)
 					local start = projectile.Position
 					local duration = 1.2
 					local elapsed = 0
+					local hit = false -- evita daño múltiple por proyectil
 
 					local conn
 					conn = RunService.Heartbeat:Connect(function(dt)
+						if not projectile.Parent then
+							conn:Disconnect()
+							return
+						end
 						elapsed += dt
 						local alpha = math.min(elapsed / duration, 1)
 						projectile.Position = start:Lerp(target, alpha)
-						if (projectile.Position - hrp.Position).Magnitude < 3 then
-							local hum = char:FindFirstChild("Humanoid")
+
+						if not hit and (projectile.Position - hrp.Position).Magnitude < 3 then
+							hit = true
+							local hum = char:FindFirstChildOfClass("Humanoid")
 							if hum then
-								hum:TakeDamage(15 * GameConfig.DifficultyScaling.damageMultiplier(challenge.order))
+								hum:TakeDamage(dmgPerHit)
 							end
 						end
 						if alpha >= 1 then
@@ -154,7 +177,7 @@ function ChallengeBehaviors.startDodge(zone: BasePart, challengeId: string)
 							projectile:Destroy()
 						end
 					end)
-					Debris:AddItem(projectile, 2)
+					Debris:AddItem(projectile, duration + 0.2)
 				end
 			end
 			task.wait(interval)
@@ -168,12 +191,21 @@ function ChallengeBehaviors.startLavaDamage(zone: BasePart, challengeId: string)
 		return
 	end
 
+	local dmg = 20 * GameConfig.DifficultyScaling.damageMultiplier(challenge.order)
+	-- Cooldown de daño por personaje para evitar 60 hits/s
+	local lavaCooldown: { [Model]: number } = {}
+
 	for _, part in zone:GetDescendants() do
 		if part:IsA("BasePart") and (part.Name == "Lava" or part:GetAttribute("IsLava")) then
 			part.Touched:Connect(function(hit)
-				local hum = hit.Parent and hit.Parent:FindFirstChild("Humanoid")
-				if hum then
-					hum:TakeDamage(20 * GameConfig.DifficultyScaling.damageMultiplier(challenge.order))
+				local char = hit.Parent
+				if not char then return end
+				local hum = char:FindFirstChildOfClass("Humanoid")
+				if not hum or hum.Health <= 0 then return end
+				local now = tick()
+				if not lavaCooldown[char] or now - lavaCooldown[char] >= 0.6 then
+					lavaCooldown[char] = now
+					hum:TakeDamage(dmg)
 				end
 			end)
 		end

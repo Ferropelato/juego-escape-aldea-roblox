@@ -65,13 +65,18 @@ function AchievementService.onChallengeCompleted(player: Player, challengeId: st
 		AchievementService.grant(player, achId)
 	end
 
-	local data = DataService.get(player)
-	local completed = 0
-	for _ in data.completedChallenges do
-		completed += 1
-	end
-	if completed >= 6 then
-		AchievementService.grant(player, "Survivor")
+	-- Survivor: 6 zonas completadas en la sesión actual SIN morir
+	local SpawnService = require(script.Parent.SpawnService)
+	local sessionDeaths = SpawnService.getSessionDeaths(player)
+	if sessionDeaths == 0 then
+		local data = DataService.get(player)
+		local completed = 0
+		for _ in data.completedChallenges do
+			completed += 1
+		end
+		if completed >= 6 then
+			AchievementService.grant(player, "Survivor")
+		end
 	end
 end
 

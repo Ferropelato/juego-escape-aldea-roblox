@@ -1,5 +1,6 @@
 --[[
-	Muestra la zona según el progreso del servidor (no cajas gigantes flotantes).
+	Etiqueta top-center que muestra zona activa.
+	Usa AnchorPoint(0.5, 0) para centrado real en cualquier resolución.
 ]]
 
 local Players = game:GetService("Players")
@@ -14,35 +15,37 @@ local ZoneDisplayController = {}
 
 function ZoneDisplayController.ensureLabel()
 	local gui = player.PlayerGui:FindFirstChild("EscapeIslandHUD") or player.PlayerGui:FindFirstChild("GameUI")
-	if not gui then
-		return nil
-	end
+	if not gui then return nil end
 	local label = gui:FindFirstChild("ZoneHint")
-	if label then
-		return label
-	end
+	if label then return label end
+
 	label = Instance.new("TextLabel")
 	label.Name = "ZoneHint"
-	label.Size = UDim2.new(0, 320, 0, 28)
-	label.Position = UDim2.new(0.5, -160, 0, 8)
+	-- Centrado real: ancla en 0.5,0 y posición relativa
+	label.AnchorPoint = Vector2.new(0.5, 0)
+	label.Size = UDim2.new(0.45, 0, 0, 30)
+	label.Position = UDim2.new(0.5, 0, 0, 8)
 	label.BackgroundColor3 = Color3.fromRGB(15, 25, 20)
-	label.BackgroundTransparency = 0.35
+	label.BackgroundTransparency = 0.3
 	label.TextColor3 = Color3.new(1, 1, 1)
 	label.Font = Enum.Font.GothamBold
 	label.TextSize = 14
+	label.TextScaled = false
+	label.TextTruncate = Enum.TextTruncate.AtEnd
 	label.Text = ""
+	label.ZIndex = 5
 	label.Parent = gui
+
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 6)
 	corner.Parent = label
+
 	return label
 end
 
 function ZoneDisplayController.update()
 	local label = ZoneDisplayController.ensureLabel()
-	if not label then
-		return
-	end
+	if not label then return end
 
 	local data = PlayerDataController.get()
 	if not data or not data.currentChallenge then

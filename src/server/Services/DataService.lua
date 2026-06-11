@@ -99,9 +99,27 @@ function DataService.save(player: Player): boolean
 	end
 
 	local key = SAVE_KEY_PREFIX .. player.UserId
-	local ok = pcall(function()
-		DataService._store:SetAsync(key, toSave)
+
+	-- UpdateAsync es más seguro que SetAsync: no pierde datos ante saves concurrentes
+	local ok, err = pcall(function()
+		if DataService._usingMock then
+			DataService._store:SetAsync(key, toSave)
+		else
+			DataService._store:UpdateAsync(key, function(_old)
+				return toSave
+			end)
+		end
 	end)
+
+	if not ok then
+		warn("[DataService] Error guardando datos de", player.Name, ":", err)
+		-- Retry una vez con delay
+		task.delay(3, function()
+			if player.Parent then
+				DataService.save(player)
+			end
+		end)
+	end
 	return ok
 end
 
@@ -112,6 +130,24 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	DataService.save(player)
 	DataService.remove(player)
+end)
+
+-- Guardar todos los datos antes de que el servidor se apague
+game:BindToClose(function()
+	local saves = {}
+	for player, _ in DataService._cache do
+		table.insert(saves, task.spawn(function()
+			DataService.save(player)
+		end))
+	end
+	-- Esperar a que todos los saves terminen (máx 25s, límite de Roblox)
+	local deadline = tick() + 25
+	for _, thread in saves do
+		local remaining = deadline - tick()
+		if remaining > 0 then
+			task.wait(math.min(0.05, remaining))
+		end
+	end
 end)
 
 return DataService

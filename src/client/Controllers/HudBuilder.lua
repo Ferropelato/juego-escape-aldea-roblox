@@ -1,9 +1,10 @@
 --[[
-	Crea el HUD en PlayerGui (siempre visible).
-	No depende de que StarterGui esté bien montado en Rojo.
+	HUD responsive: escala con viewport, soporta landscape mobile y PC.
+	UIScale en MainHUD + AnchorPoint en paneles flotantes.
 ]]
 
 local Players = game:GetService("Players")
+local GuiService = game:GetService("GuiService")
 
 local HudBuilder = {}
 local player = Players.LocalPlayer
@@ -33,17 +34,15 @@ export type HudRefs = {
 	shopButton: TextButton,
 	shopPanel: Frame,
 	shopList: ScrollingFrame,
+	dailyRewardButton: TextButton?,
+	streakLabel: TextLabel?,
 }
 
 function HudBuilder.getRefs(): HudRefs?
 	local gui = player.PlayerGui:FindFirstChild("EscapeIslandHUD")
-	if not gui then
-		return nil
-	end
+	if not gui then return nil end
 	local main = gui:FindFirstChild("MainHUD") :: Frame?
-	if not main then
-		return nil
-	end
+	if not main then return nil end
 	return {
 		screenGui = gui,
 		mainHud = main,
@@ -69,6 +68,8 @@ function HudBuilder.getRefs(): HudRefs?
 		shopButton = main:FindFirstChild("ShopButton") :: TextButton,
 		shopPanel = gui:FindFirstChild("ShopPanel") :: Frame,
 		shopList = gui:FindFirstChild("ShopPanel") and gui.ShopPanel:FindFirstChild("ShopList") :: ScrollingFrame,
+		dailyRewardButton = main:FindFirstChild("DailyRewardButton") :: TextButton,
+		streakLabel = main:FindFirstChild("StreakLabel") :: TextLabel,
 	}
 end
 
@@ -79,17 +80,16 @@ local function corner(parent: Instance, radius: number)
 	return c
 end
 
+-- Detectar si el dispositivo es touch (mobile/tablet)
+local isTouch = GuiService.TouchEnabled
+local BTN_H = isTouch and 34 or 28  -- botones más altos en touch
+
 function HudBuilder.ensure(): HudRefs
 	local existing = HudBuilder.getRefs()
-	if existing then
-		return existing
-	end
+	if existing then return existing end
 
-	-- Ocultar StarterGui roto si existe
 	local old = player.PlayerGui:FindFirstChild("GameUI")
-	if old and old:IsA("ScreenGui") then
-		old.Enabled = false
-	end
+	if old and old:IsA("ScreenGui") then old.Enabled = false end
 
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "EscapeIslandHUD"
@@ -98,15 +98,24 @@ function HudBuilder.ensure(): HudRefs
 	gui.DisplayOrder = 10
 	gui.Parent = player.PlayerGui
 
+	-- ── MainHUD (panel izquierdo fijo) ────────────────────────────
+	local HUD_W = 300
+	local HUD_H = 368 + (isTouch and 8 or 0)
+
 	local main = Instance.new("Frame")
 	main.Name = "MainHUD"
-	main.Size = UDim2.new(0, 300, 0, 332)
+	main.Size = UDim2.new(0, HUD_W, 0, HUD_H)
 	main.Position = UDim2.new(0, 12, 0, 12)
 	main.BackgroundColor3 = Color3.fromRGB(18, 22, 28)
 	main.BackgroundTransparency = 0.08
 	main.BorderSizePixel = 0
 	main.Parent = gui
 	corner(main, 10)
+
+	-- UIScale: escala el MainHUD según el viewport para que quepa en mobile
+	local hudScale = Instance.new("UIScale")
+	hudScale.Scale = 1
+	hudScale.Parent = main
 
 	local title = Instance.new("TextLabel")
 	title.Name = "Title"
@@ -194,11 +203,12 @@ function HudBuilder.ensure(): HudRefs
 	backpack.Parent = main
 	corner(backpack, 6)
 
-	local function actionButton(name: string, text: string, x: number, color: Color3)
+	-- Fila de botones helper
+	local function actionButton(name: string, text: string, x: number, w: number, y: number, color: Color3)
 		local btn = Instance.new("TextButton")
 		btn.Name = name
-		btn.Size = UDim2.new(0, 88, 0, 28)
-		btn.Position = UDim2.new(0, x, 0, 262)
+		btn.Size = UDim2.new(0, w, 0, BTN_H)
+		btn.Position = UDim2.new(0, x, 0, y)
 		btn.BackgroundColor3 = color
 		btn.BorderSizePixel = 0
 		btn.Text = text
@@ -210,18 +220,20 @@ function HudBuilder.ensure(): HudRefs
 		return btn
 	end
 
-	local craftBtn = actionButton("CraftButton", "🔨 Craft", 6, Color3.fromRGB(45, 90, 140))
-	local respawnBtn = actionButton("RespawnButton", "↩ CP", 100, Color3.fromRGB(90, 55, 55))
-	local islandBtn = actionButton("IslandButton", "🏝 Isla", 194, Color3.fromRGB(55, 100, 70))
+	local ROW1_Y = 262
+	local ROW2_Y = ROW1_Y + BTN_H + 6
+	local ROW3_Y = ROW2_Y + BTN_H + 6
+
+	local craftBtn  = actionButton("CraftButton",      "🔨 Craft",   6,   88, ROW1_Y, Color3.fromRGB(45, 90, 140))
+	local respawnBtn= actionButton("RespawnButton",    "↩ CP",      100,  88, ROW1_Y, Color3.fromRGB(90, 55, 55))
+	local islandBtn = actionButton("IslandButton",     "🏝 Isla",   194,  94, ROW1_Y, Color3.fromRGB(55, 100, 70))
 	islandBtn.Visible = false
 
-	local achBtn = actionButton("AchievementButton", "🏆 Logros", 6, Color3.fromRGB(90, 70, 30))
-	achBtn.Position = UDim2.new(0, 6, 0, 296)
-
-	local achCount = Instance.new("TextLabel")
+	local achBtn    = actionButton("AchievementButton","🏆 Logros",  6,   88, ROW2_Y, Color3.fromRGB(90, 70, 30))
+	local achCount  = Instance.new("TextLabel")
 	achCount.Name = "AchievementCount"
-	achCount.Size = UDim2.new(0, 88, 0, 28)
-	achCount.Position = UDim2.new(0, 100, 0, 296)
+	achCount.Size = UDim2.new(0, 88, 0, BTN_H)
+	achCount.Position = UDim2.new(0, 100, 0, ROW2_Y)
 	achCount.BackgroundColor3 = Color3.fromRGB(35, 38, 45)
 	achCount.BorderSizePixel = 0
 	achCount.Text = "0/13"
@@ -231,21 +243,50 @@ function HudBuilder.ensure(): HudRefs
 	achCount.Parent = main
 	corner(achCount, 6)
 
-	local shopBtn = actionButton("ShopButton", "🛒 Tienda", 194, Color3.fromRGB(55, 75, 120))
-	shopBtn.Position = UDim2.new(0, 194, 0, 296)
+	local shopBtn = actionButton("ShopButton", "🛒 Tienda", 194, 94, ROW2_Y, Color3.fromRGB(55, 75, 120))
 
+	-- Fila 3: daily reward (ancho completo)
+	local dailyBtn = Instance.new("TextButton")
+	dailyBtn.Name = "DailyRewardButton"
+	dailyBtn.Size = UDim2.new(1, -12, 0, BTN_H)
+	dailyBtn.Position = UDim2.new(0, 6, 0, ROW3_Y)
+	dailyBtn.BackgroundColor3 = Color3.fromRGB(160, 100, 20)
+	dailyBtn.BorderSizePixel = 0
+	dailyBtn.Text = "🎁 Recompensa diaria"
+	dailyBtn.TextColor3 = Color3.new(1, 1, 1)
+	dailyBtn.Font = Enum.Font.GothamBold
+	dailyBtn.TextSize = 13
+	dailyBtn.Parent = main
+	corner(dailyBtn, 6)
+
+	local streakLbl = Instance.new("TextLabel")
+	streakLbl.Name = "StreakLabel"
+	streakLbl.Size = UDim2.new(1, -12, 0, 20)
+	streakLbl.Position = UDim2.new(0, 6, 0, ROW3_Y + BTN_H + 2)
+	streakLbl.BackgroundTransparency = 1
+	streakLbl.Text = ""
+	streakLbl.TextColor3 = Color3.fromRGB(255, 200, 80)
+	streakLbl.Font = Enum.Font.Gotham
+	streakLbl.TextSize = 11
+	streakLbl.TextXAlignment = Enum.TextXAlignment.Center
+	streakLbl.Parent = main
+
+	-- ── Notificaciones (top-center) ──────────────────────────────
 	local notifContainer = Instance.new("Frame")
 	notifContainer.Name = "NotificationContainer"
-	notifContainer.Size = UDim2.new(0.5, 0, 0, 200)
-	notifContainer.Position = UDim2.new(0.25, 0, 0, 8)
+	notifContainer.AnchorPoint = Vector2.new(0.5, 0)
+	notifContainer.Size = UDim2.new(0.55, 0, 0, 220)
+	notifContainer.Position = UDim2.new(0.5, 0, 0, 8)
 	notifContainer.BackgroundTransparency = 1
 	notifContainer.Parent = gui
 
+	-- ── Panel de Crafteo (derecha, ancla al borde derecho) ────────
 	local craftPanel = Instance.new("Frame")
 	craftPanel.Name = "CraftingPanel"
 	craftPanel.Visible = false
-	craftPanel.Size = UDim2.new(0, 320, 0, 400)
-	craftPanel.Position = UDim2.new(1, -332, 0, 12)
+	craftPanel.AnchorPoint = Vector2.new(1, 0)
+	craftPanel.Size = UDim2.new(0, 320, 0, 420)
+	craftPanel.Position = UDim2.new(1, -8, 0, 8)
 	craftPanel.BackgroundColor3 = Color3.fromRGB(25, 28, 36)
 	craftPanel.BackgroundTransparency = 0.08
 	craftPanel.BorderSizePixel = 0
@@ -264,18 +305,23 @@ function HudBuilder.ensure(): HudRefs
 	craftTitle.TextXAlignment = Enum.TextXAlignment.Left
 	craftTitle.Parent = craftPanel
 
-	local closeBtn = Instance.new("TextButton")
-	closeBtn.Name = "CloseButton"
-	closeBtn.Size = UDim2.new(0, 28, 0, 28)
-	closeBtn.Position = UDim2.new(1, -34, 0, 6)
-	closeBtn.BackgroundColor3 = Color3.fromRGB(80, 40, 40)
-	closeBtn.BorderSizePixel = 0
-	closeBtn.Text = "✕"
-	closeBtn.TextColor3 = Color3.new(1, 1, 1)
-	closeBtn.Font = Enum.Font.GothamBold
-	closeBtn.TextSize = 14
-	closeBtn.Parent = craftPanel
-	corner(closeBtn, 6)
+	local function closeBtn(parent: Frame)
+		local btn = Instance.new("TextButton")
+		btn.Name = "CloseButton"
+		btn.Size = UDim2.new(0, 32, 0, 32)
+		btn.Position = UDim2.new(1, -38, 0, 4)
+		btn.BackgroundColor3 = Color3.fromRGB(80, 40, 40)
+		btn.BorderSizePixel = 0
+		btn.Text = "✕"
+		btn.TextColor3 = Color3.new(1, 1, 1)
+		btn.Font = Enum.Font.GothamBold
+		btn.TextSize = 14
+		btn.Parent = parent
+		corner(btn, 6)
+		return btn
+	end
+
+	closeBtn(craftPanel)
 
 	local recipeScroll = Instance.new("ScrollingFrame")
 	recipeScroll.Name = "RecipeList"
@@ -289,41 +335,31 @@ function HudBuilder.ensure(): HudRefs
 	recipeScroll.Parent = craftPanel
 	corner(recipeScroll, 6)
 
+	-- ── Panel de Logros (abajo-izquierda, ancla al borde inferior) ─
 	local achPanel = Instance.new("Frame")
 	achPanel.Name = "AchievementPanel"
 	achPanel.Visible = false
+	achPanel.AnchorPoint = Vector2.new(0, 1)
 	achPanel.Size = UDim2.new(0, 300, 0, 360)
-	achPanel.Position = UDim2.new(0, 12, 0, 350)
+	achPanel.Position = UDim2.new(0, 8, 1, -8)
 	achPanel.BackgroundColor3 = Color3.fromRGB(25, 28, 36)
 	achPanel.BackgroundTransparency = 0.08
 	achPanel.BorderSizePixel = 0
 	achPanel.Parent = gui
 	corner(achPanel, 10)
 
-	local achTitle = Instance.new("TextLabel")
-	achTitle.Name = "Title"
-	achTitle.Size = UDim2.new(1, -12, 0, 32)
-	achTitle.Position = UDim2.new(0, 6, 0, 6)
-	achTitle.BackgroundTransparency = 1
-	achTitle.Text = "🏆 Logros"
-	achTitle.TextColor3 = Color3.fromRGB(255, 220, 120)
-	achTitle.Font = Enum.Font.GothamBold
-	achTitle.TextSize = 18
-	achTitle.TextXAlignment = Enum.TextXAlignment.Left
-	achTitle.Parent = achPanel
-
-	local achClose = Instance.new("TextButton")
-	achClose.Name = "CloseButton"
-	achClose.Size = UDim2.new(0, 28, 0, 28)
-	achClose.Position = UDim2.new(1, -34, 0, 6)
-	achClose.BackgroundColor3 = Color3.fromRGB(80, 40, 40)
-	achClose.BorderSizePixel = 0
-	achClose.Text = "✕"
-	achClose.TextColor3 = Color3.new(1, 1, 1)
-	achClose.Font = Enum.Font.GothamBold
-	achClose.TextSize = 14
-	achClose.Parent = achPanel
-	corner(achClose, 6)
+	local achPanelTitle = Instance.new("TextLabel")
+	achPanelTitle.Name = "Title"
+	achPanelTitle.Size = UDim2.new(1, -12, 0, 32)
+	achPanelTitle.Position = UDim2.new(0, 6, 0, 6)
+	achPanelTitle.BackgroundTransparency = 1
+	achPanelTitle.Text = "🏆 Logros"
+	achPanelTitle.TextColor3 = Color3.fromRGB(255, 220, 120)
+	achPanelTitle.Font = Enum.Font.GothamBold
+	achPanelTitle.TextSize = 18
+	achPanelTitle.TextXAlignment = Enum.TextXAlignment.Left
+	achPanelTitle.Parent = achPanel
+	closeBtn(achPanel)
 
 	local achScroll = Instance.new("ScrollingFrame")
 	achScroll.Name = "AchievementList"
@@ -337,11 +373,13 @@ function HudBuilder.ensure(): HudRefs
 	achScroll.Parent = achPanel
 	corner(achScroll, 6)
 
+	-- ── Banner de Onboarding (abajo-centro) ──────────────────────
 	local onboardBanner = Instance.new("Frame")
 	onboardBanner.Name = "OnboardingBanner"
 	onboardBanner.Visible = false
-	onboardBanner.Size = UDim2.new(0, 420, 0, 72)
-	onboardBanner.Position = UDim2.new(0.5, -210, 1, -90)
+	onboardBanner.AnchorPoint = Vector2.new(0.5, 1)
+	onboardBanner.Size = UDim2.new(0.55, 0, 0, 76)
+	onboardBanner.Position = UDim2.new(0.5, 0, 1, -12)
 	onboardBanner.BackgroundColor3 = Color3.fromRGB(20, 35, 55)
 	onboardBanner.BackgroundTransparency = 0.1
 	onboardBanner.BorderSizePixel = 0
@@ -374,7 +412,7 @@ function HudBuilder.ensure(): HudRefs
 
 	local onboardText = Instance.new("TextLabel")
 	onboardText.Name = "Text"
-	onboardText.Size = UDim2.new(1, -24, 0, 32)
+	onboardText.Size = UDim2.new(1, -24, 0, 34)
 	onboardText.Position = UDim2.new(0, 12, 0, 32)
 	onboardText.BackgroundTransparency = 1
 	onboardText.Text = ""
@@ -387,8 +425,8 @@ function HudBuilder.ensure(): HudRefs
 
 	local onboardDismiss = Instance.new("TextButton")
 	onboardDismiss.Name = "Dismiss"
-	onboardDismiss.Size = UDim2.new(0, 24, 0, 24)
-	onboardDismiss.Position = UDim2.new(1, -32, 0, 8)
+	onboardDismiss.Size = UDim2.new(0, 28, 0, 28)
+	onboardDismiss.Position = UDim2.new(1, -36, 0, 6)
 	onboardDismiss.BackgroundTransparency = 1
 	onboardDismiss.Text = "✕"
 	onboardDismiss.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -396,11 +434,13 @@ function HudBuilder.ensure(): HudRefs
 	onboardDismiss.TextSize = 14
 	onboardDismiss.Parent = onboardBanner
 
+	-- ── Panel de Tienda (centro absoluto) ─────────────────────────
 	local shopPanel = Instance.new("Frame")
 	shopPanel.Name = "ShopPanel"
 	shopPanel.Visible = false
-	shopPanel.Size = UDim2.new(0, 340, 0, 440)
-	shopPanel.Position = UDim2.new(0.5, -170, 0.5, -220)
+	shopPanel.AnchorPoint = Vector2.new(0.5, 0.5)
+	shopPanel.Size = UDim2.new(0, 340, 0, 460)
+	shopPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
 	shopPanel.BackgroundColor3 = Color3.fromRGB(22, 26, 34)
 	shopPanel.BackgroundTransparency = 0.05
 	shopPanel.BorderSizePixel = 0
@@ -430,19 +470,7 @@ function HudBuilder.ensure(): HudRefs
 	shopSubtitle.TextSize = 11
 	shopSubtitle.TextXAlignment = Enum.TextXAlignment.Left
 	shopSubtitle.Parent = shopPanel
-
-	local shopClose = Instance.new("TextButton")
-	shopClose.Name = "CloseButton"
-	shopClose.Size = UDim2.new(0, 28, 0, 28)
-	shopClose.Position = UDim2.new(1, -34, 0, 6)
-	shopClose.BackgroundColor3 = Color3.fromRGB(80, 40, 40)
-	shopClose.BorderSizePixel = 0
-	shopClose.Text = "✕"
-	shopClose.TextColor3 = Color3.new(1, 1, 1)
-	shopClose.Font = Enum.Font.GothamBold
-	shopClose.TextSize = 14
-	shopClose.Parent = shopPanel
-	corner(shopClose, 6)
+	closeBtn(shopPanel)
 
 	local shopScroll = Instance.new("ScrollingFrame")
 	shopScroll.Name = "ShopList"
@@ -455,6 +483,58 @@ function HudBuilder.ensure(): HudRefs
 	shopScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 	shopScroll.Parent = shopPanel
 	corner(shopScroll, 6)
+
+	-- ── Responsive: ajusta UIScale y tamaños de paneles ──────────
+	local camera = workspace.CurrentCamera
+
+	local function updateResponsive()
+		local vp = camera.ViewportSize
+		if vp.X <= 0 or vp.Y <= 0 then return end
+
+		-- Escala del MainHUD: referencia 768px alto.
+		-- En mobile landscape (375px alto) → scale ≈ 0.65
+		local scaleH = vp.Y / 768
+		local scaleW = vp.X / 1200
+		local scale  = math.clamp(math.min(scaleH, scaleW), 0.55, 1.0)
+		hudScale.Scale = scale
+
+		-- Ancho efectivo del MainHUD escalado (incluyendo margen)
+		local mainEffW = HUD_W * scale + 24
+
+		-- CraftingPanel: ocupa el espacio restante a la derecha
+		local cpW = math.clamp(math.min(320, vp.X - mainEffW - 20), 220, 340)
+		local cpH = math.clamp(vp.Y - 20, 280, 480)
+		craftPanel.Size = UDim2.new(0, cpW, 0, cpH)
+		-- Ya usa AnchorPoint(1,0) + Position(1,-8, 0,8)
+
+		-- ShopPanel: centrado, ocupa máximo disponible
+		local spW = math.clamp(vp.X - 32, 280, 360)
+		local spH = math.clamp(vp.Y - 32, 320, 480)
+		shopPanel.Size = UDim2.new(0, spW, 0, spH)
+
+		-- AchievementPanel: no exceder la mitad de pantalla en altura
+		local apH = math.clamp(vp.Y * 0.55, 220, 380)
+		local apW = math.clamp(HUD_W * scale, 220, 300)
+		achPanel.Size = UDim2.new(0, apW, 0, apH)
+
+		-- OnboardingBanner: no exceder 520px de ancho en mobile
+		local bannerW = math.clamp(vp.X * 0.7, 280, 520)
+		onboardBanner.Size = UDim2.new(0, bannerW, 0, 76)
+
+		-- En pantallas muy pequeñas (mobile landscape angosto) ajustar posición HUD
+		if vp.Y < 420 then
+			-- HUD en esquina inferior izquierda para liberar vista central
+			main.AnchorPoint = Vector2.new(0, 1)
+			main.Position = UDim2.new(0, 8, 1, -8)
+		else
+			main.AnchorPoint = Vector2.new(0, 0)
+			main.Position = UDim2.new(0, 12, 0, 12)
+		end
+	end
+
+	-- Actualizar al crear y en cada cambio de viewport
+	task.defer(updateResponsive)
+	camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateResponsive)
 
 	return {
 		screenGui = gui,
@@ -481,6 +561,8 @@ function HudBuilder.ensure(): HudRefs
 		shopButton = shopBtn,
 		shopPanel = shopPanel,
 		shopList = shopScroll,
+		dailyRewardButton = dailyBtn,
+		streakLabel = streakLbl,
 	}
 end
 

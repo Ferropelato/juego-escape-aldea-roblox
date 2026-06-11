@@ -19,8 +19,18 @@ function CraftingService.canCraft(player: Player, recipeId: string): (boolean, s
 		return false, "Ya crafteaste esto"
 	end
 
-	if not InventoryService.hasResources(player, recipe.ingredients) then
-		return false, "Faltan recursos"
+	-- Construir mensaje detallado de qué falta
+	local missing = {}
+	for resourceId, needed in recipe.ingredients do
+		local have = data.inventory[resourceId] or 0
+		if have < needed then
+			local cfg = GameConfig.Resources[resourceId]
+			local name = cfg and cfg.displayName or resourceId
+			table.insert(missing, (needed - have) .. " " .. name)
+		end
+	end
+	if #missing > 0 then
+		return false, "Te falta: " .. table.concat(missing, ", ")
 	end
 
 	return true, nil

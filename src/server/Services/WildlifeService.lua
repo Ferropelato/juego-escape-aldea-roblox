@@ -17,9 +17,15 @@ WildlifeService._creatures = {} :: { {
 } }
 
 local function bindDamage(part: BasePart, damage: number)
+	local damageCooldown: { [Model]: number } = {}
 	part.Touched:Connect(function(hit)
-		local hum = hit.Parent and hit.Parent:FindFirstChildOfClass("Humanoid")
-		if hum and hum.Health > 0 then
+		local char = hit.Parent
+		if not char then return end
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if not hum or hum.Health <= 0 then return end
+		local now = tick()
+		if not damageCooldown[char] or now - damageCooldown[char] >= 1 then
+			damageCooldown[char] = now
 			hum:TakeDamage(damage)
 		end
 	end)
@@ -97,7 +103,19 @@ function WildlifeService.createCreature(
 end
 
 function WildlifeService.init()
+	-- Cada criatura tiene su propio timer para limitar frecuencia de búsqueda de target
+	local PASSIVE_TICK = 0.1    -- 10 Hz para criaturas pasivas
+	local AGGRESSIVE_TARGET_TICK = 0.5  -- Re-busca target cada 0.5s (no 60/s)
+	local CHASE_RADIUS = 55
+
+	for _, creature in WildlifeService._creatures do
+		creature._moveTimer = 0
+		creature._targetTimer = 0
+		creature._cachedTarget = nil :: Vector3?
+	end
+
 	RunService.Heartbeat:Connect(function(dt)
+		local now = tick()
 		for _, creature in WildlifeService._creatures do
 			local model = creature.model
 			local body = model and model.PrimaryPart
@@ -105,30 +123,46 @@ function WildlifeService.init()
 				continue
 			end
 
+			creature._moveTimer = (creature._moveTimer or 0) + dt
+
+			-- Pasivas: actualizar solo a 10 Hz
+			local tickRate = creature.aggressive and 0 or PASSIVE_TICK
+			if creature._moveTimer < tickRate then
+				continue
+			end
+			creature._moveTimer = 0
+
 			local targetPos: Vector3
 
 			if creature.aggressive then
-				local nearest: Player? = nil
-				local nearestDist = 55
-				for _, player in Players:GetPlayers() do
-					local char = player.Character
-					local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
-					if hrp then
-						local d = (hrp.Position - body.Position).Magnitude
-						if d < nearestDist then
-							nearestDist = d
-							nearest = player
+				-- Re-buscar target solo cada 0.5s
+				creature._targetTimer = (creature._targetTimer or 0) + dt
+				if creature._targetTimer >= AGGRESSIVE_TARGET_TICK or not creature._cachedTarget then
+					creature._targetTimer = 0
+					local nearest: Player? = nil
+					local nearestDist = CHASE_RADIUS
+					for _, player in Players:GetPlayers() do
+						local char = player.Character
+						local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+						if hrp then
+							local d = (hrp.Position - body.Position).Magnitude
+							if d < nearestDist then
+								nearestDist = d
+								nearest = player
+							end
 						end
 					end
-				end
-				if nearest then
-					local char = nearest.Character
-					local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
-					if hrp then
-						targetPos = hrp.Position
+					if nearest then
+						local char = nearest.Character
+						local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+						creature._cachedTarget = hrp and hrp.Position or nil
 					else
-						targetPos = creature.waypoints[creature.wpIndex]
+						creature._cachedTarget = nil
 					end
+				end
+
+				if creature._cachedTarget then
+					targetPos = creature._cachedTarget
 				else
 					local wp = creature.waypoints[creature.wpIndex]
 					targetPos = wp
@@ -144,9 +178,10 @@ function WildlifeService.init()
 				end
 			end
 
+			local effectiveDt = creature.aggressive and dt or PASSIVE_TICK
 			local flat = Vector3.new(targetPos.X - body.Position.X, 0, targetPos.Z - body.Position.Z)
 			if flat.Magnitude > 0.5 then
-				local step = flat.Unit * creature.speed * dt
+				local step = flat.Unit * creature.speed * effectiveDt
 				body.CFrame = CFrame.lookAt(body.Position + step, body.Position + step + flat.Unit)
 				if model:FindFirstChild("Head") then
 					model.Head.CFrame = body.CFrame * CFrame.new(0, body.Size.Y * 0.35, -body.Size.Z * 0.35)

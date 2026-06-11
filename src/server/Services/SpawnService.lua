@@ -10,6 +10,12 @@ local CheckpointService = require(script.Parent.CheckpointService)
 local DataService = require(script.Parent.DataService)
 
 local SpawnService = {}
+-- Muertes por sesión en memoria (no persiste — se resetea al reconectar)
+SpawnService._sessionDeaths = {} :: { [number]: number }
+
+function SpawnService.getSessionDeaths(player: Player): number
+	return SpawnService._sessionDeaths[player.UserId] or 0
+end
 
 function SpawnService.spawnPlayer(player: Player, useRaftIntro: boolean?)
 	local character = player.Character or player.CharacterAdded:Wait()
@@ -69,12 +75,28 @@ function SpawnService._raftIntro(player: Player, character: Model, hrp: BasePart
 end
 
 Players.PlayerAdded:Connect(function(player)
-	player.CharacterAdded:Connect(function()
+	SpawnService._sessionDeaths[player.UserId] = 0
+	player.CharacterAdded:Connect(function(character)
+		-- Contar como muerte si el personaje murió (no en el spawn inicial)
+		if SpawnService._sessionDeaths[player.UserId] and SpawnService._sessionDeaths[player.UserId] > 0 then
+			-- Ya contado al morir
+		end
+		local hum = character:WaitForChild("Humanoid", 5) :: Humanoid?
+		if hum then
+			hum.Died:Connect(function()
+				SpawnService._sessionDeaths[player.UserId] = (SpawnService._sessionDeaths[player.UserId] or 0) + 1
+			end)
+		end
+
 		task.wait(0.2)
 		local data = DataService.get(player)
 		local isNew = not data.lastCheckpointPosition and not next(data.completedChallenges)
 		SpawnService.spawnPlayer(player, isNew)
 	end)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+	SpawnService._sessionDeaths[player.UserId] = nil
 end)
 
 return SpawnService
