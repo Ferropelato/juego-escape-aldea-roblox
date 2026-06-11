@@ -4,7 +4,7 @@
 ]]
 
 local Players = game:GetService("Players")
-local GuiService = game:GetService("GuiService")
+local UserInputService = game:GetService("UserInputService")
 
 local HudBuilder = {}
 local player = Players.LocalPlayer
@@ -81,7 +81,7 @@ local function corner(parent: Instance, radius: number)
 end
 
 -- Detectar si el dispositivo es touch (mobile/tablet)
-local isTouch = GuiService.TouchEnabled
+local isTouch = UserInputService.TouchEnabled
 local BTN_H = isTouch and 34 or 28  -- botones más altos en touch
 
 function HudBuilder.ensure(): HudRefs

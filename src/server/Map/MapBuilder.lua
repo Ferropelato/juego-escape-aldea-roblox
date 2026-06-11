@@ -109,7 +109,7 @@ end
 
 -- Entrada estrecha en el borde de la zona (puente o camino), no en el centro
 local ZONE_ENTRY_OFFSETS: { [string]: Vector3 } = {
-	JungleMaze = Vector3.new(-82, 4, -55),
+	JungleMaze = Vector3.new(-114, 4, -55),  -- frente a la entrada oeste del laberinto
 	RiverCross = Vector3.new(-62, 4, 0),
 	StoneJump = Vector3.new(-95, 5, 0),
 	LagoonDive = Vector3.new(0, 3, 52),
@@ -277,12 +277,14 @@ local function createFinish(parent: Instance, position: Vector3)
 end
 
 -- Puente caminable: puerta al inicio + espinas/agua abajo (sin teletransporte)
+-- addGaps: agrega tramos sin tablones que requieren saltar (puente desafiante)
 local function createWalkBridge(
 	parent: Instance,
 	toChallengeId: string,
 	fromPos: Vector3,
 	toPos: Vector3,
-	bridgeWidth: number?
+	bridgeWidth: number?,
+	addGaps: boolean?
 )
 	local folder = Instance.new("Folder")
 	folder.Name = "BridgeTo_" .. toChallengeId
@@ -309,15 +311,29 @@ local function createWalkBridge(
 	gate:SetAttribute("ChallengeId", toChallengeId)
 	ChallengeService.registerGate(toChallengeId, gate)
 
-	-- Tablones del puente
+	-- Tablones del puente (con curva lateral y brechas opcionales)
 	local bridgeY = math.max(fromPos.Y, toPos.Y) + 4
+	local right = dir:Cross(Vector3.yAxis).Unit  -- vector lateral
+	-- Índices de tablones faltantes (brechas de salto) si addGaps=true
+	local gapSet: { [number]: boolean } = {}
+	if addGaps then
+		local g1 = math.floor(segments * 0.33)
+		local g2 = math.floor(segments * 0.66)
+		gapSet[g1] = true ; gapSet[g1 + 1] = true  -- brecha de 2 tablones = ~8 studs
+		gapSet[g2] = true ; gapSet[g2 + 1] = true
+	end
+
 	for i = 0, segments do
+		if gapSet[i] then continue end  -- saltar tablones de la brecha
 		local t = i / segments
-		local pos = fromPos:Lerp(toPos, t)
+		-- Curva lateral: zigzag suave que pega contra las barandas, alternando lados
+		local sway = math.sin(t * math.pi * 2) * (addGaps and 0.6 or 0.2) * width
+		local pos = fromPos:Lerp(toPos, t) + right * sway
+		local archY = bridgeY + math.sin(t * math.pi) * 1.2  -- arco sutil
 		local plank = makePart({
 			name = "BridgePlank",
 			size = Vector3.new(width, 0.7, 4.2),
-			position = Vector3.new(pos.X, bridgeY + math.sin(t * math.pi) * 0.3, pos.Z),
+			position = Vector3.new(pos.X, archY, pos.Z),
 			color = Color3.fromRGB(110, 75, 45),
 			material = Enum.Material.WoodPlanks,
 			parent = folder,
@@ -392,6 +408,69 @@ local function buildBeachZone(zoneFolder: Folder, center: Vector3, challenge)
 	createZoneBounds(zoneFolder, challenge, center)
 	local deco = PropGenerator.decoFolder(zoneFolder)
 
+	-- Balsa de llegada animada: viene desde el mar hacia la playa
+	local raftStartPos = center + Vector3.new(-30, 1, -180)
+	local raftEndPos   = center + Vector3.new(-30, 1, -62)
+	local raft = makePart({
+		name = "ArrivalRaft",
+		size = Vector3.new(10, 0.8, 16),
+		position = raftStartPos,
+		color = Color3.fromRGB(115, 80, 48),
+		material = Enum.Material.WoodPlanks,
+		parent = deco,
+	})
+	-- Mástil con bandera
+	local mast = makePart({
+		name = "RaftMast",
+		size = Vector3.new(0.7, 10, 0.7),
+		position = raftStartPos + Vector3.new(0, 5.4, -3),
+		color = Color3.fromRGB(85, 58, 32),
+		material = Enum.Material.Wood,
+		parent = deco,
+	})
+	local flag = makePart({
+		name = "RaftFlag",
+		size = Vector3.new(4, 2.5, 0.15),
+		position = raftStartPos + Vector3.new(2, 10.5, -3),
+		color = Color3.fromRGB(220, 50, 50),
+		material = Enum.Material.SmoothPlastic,
+		parent = deco,
+		canCollide = false,
+	})
+	-- Personaje dummy en la balsa (modelo visual simple)
+	local dummy = makePart({
+		name = "RaftPassenger",
+		size = Vector3.new(2, 3.5, 1),
+		position = raftStartPos + Vector3.new(0, 2.5, 2),
+		color = Color3.fromRGB(255, 215, 175),
+		material = Enum.Material.SmoothPlastic,
+		parent = deco,
+		canCollide = false,
+	})
+	-- Animar la llegada con TweenService
+	task.spawn(function()
+		local TweenService = game:GetService("TweenService")
+		local travelTime = 10
+		local ti = TweenInfo.new(travelTime, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+		TweenService:Create(raft, ti, { Position = raftEndPos }):Play()
+		TweenService:Create(mast, ti, { Position = raftEndPos + Vector3.new(0, 5.4, -3) }):Play()
+		TweenService:Create(flag, ti, { Position = raftEndPos + Vector3.new(2, 10.5, -3) }):Play()
+		TweenService:Create(dummy, ti, { Position = raftEndPos + Vector3.new(0, 2.5, 2) }):Play()
+		-- Ondear bandera
+		task.delay(travelTime, function()
+			local waveLoop = true
+			local flagOffset = 0
+			game:GetService("RunService").Heartbeat:Connect(function(dt)
+				if not waveLoop or not flag.Parent then
+					waveLoop = false
+					return
+				end
+				flagOffset += dt * 3
+				flag.CFrame = CFrame.new(raftEndPos + Vector3.new(2 + math.sin(flagOffset) * 0.4, 10.5, -3))
+			end)
+		end)
+	end)
+
 	makePart({
 		name = "Ocean",
 		size = Vector3.new(450, 8, 220),
@@ -444,10 +523,10 @@ local function buildBeachZone(zoneFolder: Folder, center: Vector3, challenge)
 
 	createFinish(zoneFolder, center + Vector3.new(72, 3, 0))
 
-	-- Puente a la selva (sin TP): playa → bosque
+	-- Puente a la selva: termina justo frente a la entrada oeste del laberinto
 	local bridgeStart = center + Vector3.new(82, 4, 0)
-	local bridgeEnd = ZONE_LAYOUT_ISLAND1.JungleMaze + Vector3.new(-82, 4, -55)
-	createWalkBridge(zoneFolder, "JungleMaze", bridgeStart, bridgeEnd, 5)
+	local bridgeEnd = ZONE_LAYOUT_ISLAND1.JungleMaze + Vector3.new(-114, 4, -55)
+	createWalkBridge(zoneFolder, "JungleMaze", bridgeStart, bridgeEnd, 5, true)
 
 	-- Trampa bajo el muelle hacia el mar
 	HazardService.createUnderBridge(deco, center + Vector3.new(-30, 0, -55), center + Vector3.new(20, 0, -55), 14, -8)
@@ -455,7 +534,7 @@ end
 
 local function buildJungleZone(zoneFolder: Folder, center: Vector3, challenge)
 	createZoneFloor(zoneFolder, center, Vector3.new(235, 0, 175))
-	createSpawn(zoneFolder, center + Vector3.new(-82, 0, -55))
+	createSpawn(zoneFolder, center + Vector3.new(-114, 0, -55))  -- frente a la entrada del laberinto
 	createZoneBounds(zoneFolder, challenge, center)
 	local deco = PropGenerator.decoFolder(zoneFolder)
 
@@ -501,7 +580,35 @@ local function buildJungleZone(zoneFolder: Folder, center: Vector3, challenge)
 	local finishPos = mazeFinishPos or (center + Vector3.new(92, 3, 38))
 	createFinish(zoneFolder, finishPos)
 
-	-- Puente al río, conectado DESPUÉS del checkpoint verde
+	-- Señal grande "SIGUIENTE ZONA →" al salir del laberinto
+	local dirSign = makePart({
+		name = "DirectionSign",
+		size = Vector3.new(14, 9, 0.6),
+		position = finishPos + Vector3.new(5, 7, 0),
+		color = Color3.fromRGB(75, 50, 30),
+		material = Enum.Material.WoodPlanks,
+		parent = zoneFolder,
+	})
+	local signGui = Instance.new("SurfaceGui")
+	signGui.Face = Enum.NormalId.Front
+	signGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	signGui.PixelsPerStud = 40
+	signGui.Parent = dirSign
+	local signFrame = Instance.new("Frame")
+	signFrame.Size = UDim2.fromScale(1, 1)
+	signFrame.BackgroundColor3 = Color3.fromRGB(25, 55, 35)
+	signFrame.BackgroundTransparency = 0.05
+	signFrame.Parent = signGui
+	local signLbl = Instance.new("TextLabel")
+	signLbl.Size = UDim2.fromScale(1, 1)
+	signLbl.BackgroundTransparency = 1
+	signLbl.Text = "🌊 SIGUIENTE:\nRío → seguí el camino →"
+	signLbl.TextColor3 = Color3.fromRGB(255, 240, 140)
+	signLbl.TextScaled = true
+	signLbl.Font = Enum.Font.GothamBold
+	signLbl.Parent = signFrame
+
+	-- Puente al río con tramos desafiantes
 	local bridgeStart = finishPos + Vector3.new(10, 1, 0)
 	local bridgeEnd = ZONE_LAYOUT_ISLAND1.RiverCross + Vector3.new(-62, 4, 0)
 	createWalkBridge(zoneFolder, "RiverCross", bridgeStart, bridgeEnd, 5)
@@ -705,6 +812,17 @@ local function buildChaseZone(zoneFolder: Folder, center: Vector3, challenge)
 		transparency = 0.5,
 		canCollide = false,
 	})
+
+	-- Puente con gate hacia DodgeGauntlet (impide saltarse la zona)
+	local chaseBridgeStart = center + Vector3.new(115, 6, 0)
+	local chaseBridgeEnd = ZONE_LAYOUT_ISLAND1.DodgeGauntlet + Vector3.new(-52, 12, 0)
+	createWalkBridge(zoneFolder, "DodgeGauntlet", chaseBridgeStart, chaseBridgeEnd, 5)
+
+	createMissionBoard(zoneFolder, chaseBridgeStart + Vector3.new(0, 9, 8), "🌋 Siguiente: Gauntlet", {
+		"Cruzá el puente hacia la pasarela volcánica.",
+		"Esquivá las rocas en movimiento.",
+		"¡No caigas al vacío!",
+	})
 end
 
 local function buildDodgeZone(zoneFolder: Folder, center: Vector3, challenge)
@@ -719,6 +837,11 @@ local function buildDodgeZone(zoneFolder: Folder, center: Vector3, challenge)
 	PropGenerator.scatterRocks(deco, center, 40, 15, "volcanic", 801)
 
 	createFinish(zoneFolder, center + Vector3.new(0, 8, 115))
+
+	-- Bridge con gate hacia la base del volcán
+	local dodgeBridgeStart = center + Vector3.new(0, 10, 120)
+	local dodgeBridgeEnd = ZONE_LAYOUT_ISLAND1.VolcanoClimb + Vector3.new(0, 4, -55)
+	createWalkBridge(zoneFolder, "VolcanoClimb", dodgeBridgeStart, dodgeBridgeEnd, 5)
 end
 
 local function buildVolcanoZone(zoneFolder: Folder, center: Vector3, challenge)
@@ -1274,8 +1397,14 @@ local function buildIsland(islandId: string, offset: Vector3)
 		if not zoneFolder:FindFirstChild("ZoneBounds") then
 			createZoneBounds(zoneFolder, challenge, layout)
 		end
-		-- JungleMaze y RiverCross registran entrada al final del puente
-		if challenge.id ~= "JungleMaze" and challenge.id ~= "RiverCross" and challenge.id ~= "IceMaze" and challenge.id ~= "SandTemple" then
+		-- Zonas con bridge propio registran su entrada en el puente, no aquí
+		local bridgeEntryZones = {
+			JungleMaze = true, RiverCross = true,
+			IceMaze = true, SandTemple = true,
+			ChaseEscape = true, DodgeGauntlet = true,
+			VolcanoClimb = true, VolcanoInterior = true,
+		}
+		if not bridgeEntryZones[challenge.id] then
 			createZoneEntry(zoneFolder, challenge, layout)
 		end
 

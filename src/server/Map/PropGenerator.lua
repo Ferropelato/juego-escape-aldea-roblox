@@ -474,16 +474,16 @@ function PropGenerator.volcano(parent: Instance, center: Vector3, baseRadius: nu
 	smoke.Transparency = NumberSequence.new(0.3, 1)
 	smoke.Parent = crater
 
-	-- Sendero de ascenso (piedras en espiral)
-	local pathSteps = 20
+	-- Sendero de ascenso en espiral: 36 escalones anchos, 2 vueltas completas
+	local pathSteps = 36
 	for step = 1, pathSteps do
 		local t = step / pathSteps
-		local angle = t * math.pi * 3
-		local r = baseRadius * (1 - t * 0.75) + 8
+		local angle = t * math.pi * 2
+		local r = baseRadius * (1 - t * 0.72) + 8
 		local y = t * height * 0.9 + 3
 		part({
 			name = "PathStone_" .. step,
-			size = Vector3.new(5, 1.2, 5),
+			size = Vector3.new(7.5, 1.5, 7.5),
 			position = center + Vector3.new(math.cos(angle) * r, y, math.sin(angle) * r),
 			color = Color3.fromRGB(100, 95, 90),
 			material = Enum.Material.Cobblestone,
