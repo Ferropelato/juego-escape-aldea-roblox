@@ -3,10 +3,12 @@
 ]]
 
 local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local GameConfig = require(Shared.Config.GameConfig)
 local ChallengeService = require(script.Parent.Parent.Services.ChallengeService)
+local NotificationService = require(script.Parent.Parent.Services.NotificationService)
 local PropGenerator = require(script.Parent.PropGenerator)
 local HazardService = require(script.Parent.Parent.Services.HazardService)
 
@@ -296,11 +298,11 @@ local function createWalkBridge(
 	local segments = math.max(4, math.floor(length / 4))
 	dir = dir.Unit
 
-	-- Puerta al inicio del puente (madera, no pared roja en el laberinto)
-	local gateCF = CFrame.lookAt(fromPos + Vector3.new(0, 5, 0), fromPos + Vector3.new(0, 5, 0) + dir)
+	-- Puerta al inicio del puente: ancha, alta y baja para que no se pueda pasar por debajo ni saltar
+	local gateCF = CFrame.lookAt(fromPos + Vector3.new(0, 8, 0), fromPos + Vector3.new(0, 8, 0) + dir)
 	local gate = makePart({
 		name = "Gate_" .. toChallengeId,
-		size = Vector3.new(width + 2, 10, 2),
+		size = Vector3.new(16, 34, 6),  -- cubre desde Y≈-9 hasta Y≈+25 desde fromPos
 		position = gateCF.Position,
 		color = Color3.fromRGB(95, 70, 45),
 		material = Enum.Material.WoodPlanks,
@@ -310,6 +312,19 @@ local function createWalkBridge(
 	gate.CFrame = gateCF
 	gate:SetAttribute("ChallengeId", toChallengeId)
 	ChallengeService.registerGate(toChallengeId, gate)
+
+	-- Notificación cuando el jugador toca la puerta bloqueada
+	local _lastGateWarn: { [number]: number } = {}
+	gate.Touched:Connect(function(hit)
+		local plr = Players:GetPlayerFromCharacter(hit.Parent)
+		if not plr then return end
+		local now = tick()
+		if (_lastGateWarn[plr.UserId] or 0) + 3 > now then return end
+		_lastGateWarn[plr.UserId] = now
+		if not ChallengeService.isChallengeUnlocked(plr, toChallengeId) then
+			NotificationService.send(plr, "🔒 ¡Completá los objetivos del panel izquierdo para abrir el puente!", "error")
+		end
+	end)
 
 	-- Tablones del puente (con curva lateral y brechas opcionales)
 	local bridgeY = math.max(fromPos.Y, toPos.Y) + 4
@@ -408,66 +423,72 @@ local function buildBeachZone(zoneFolder: Folder, center: Vector3, challenge)
 	createZoneBounds(zoneFolder, challenge, center)
 	local deco = PropGenerator.decoFolder(zoneFolder)
 
-	-- Balsa de llegada animada: viene desde el mar hacia la playa
+	-- Balsa de llegada: viene desde el mar, animada con Model+Weld para mantener las piezas juntas
 	local raftStartPos = center + Vector3.new(-30, 1, -180)
 	local raftEndPos   = center + Vector3.new(-30, 1, -62)
-	local raft = makePart({
-		name = "ArrivalRaft",
+
+	local raftModel = Instance.new("Model")
+	raftModel.Name = "ArrivalRaft"
+	raftModel.Parent = deco
+
+	local raftRoot = makePart({
+		name = "RaftRoot",
 		size = Vector3.new(10, 0.8, 16),
 		position = raftStartPos,
 		color = Color3.fromRGB(115, 80, 48),
 		material = Enum.Material.WoodPlanks,
-		parent = deco,
+		parent = raftModel,
 	})
-	-- Mástil con bandera
+
+	local function weldTo(child: Part)
+		local w = Instance.new("WeldConstraint")
+		w.Part0 = raftRoot
+		w.Part1 = child
+		w.Parent = raftRoot
+	end
+
 	local mast = makePart({
 		name = "RaftMast",
 		size = Vector3.new(0.7, 10, 0.7),
 		position = raftStartPos + Vector3.new(0, 5.4, -3),
 		color = Color3.fromRGB(85, 58, 32),
 		material = Enum.Material.Wood,
-		parent = deco,
+		parent = raftModel,
 	})
+	weldTo(mast)
+
 	local flag = makePart({
 		name = "RaftFlag",
 		size = Vector3.new(4, 2.5, 0.15),
 		position = raftStartPos + Vector3.new(2, 10.5, -3),
 		color = Color3.fromRGB(220, 50, 50),
 		material = Enum.Material.SmoothPlastic,
-		parent = deco,
+		parent = raftModel,
 		canCollide = false,
 	})
-	-- Personaje dummy en la balsa (modelo visual simple)
-	local dummy = makePart({
-		name = "RaftPassenger",
-		size = Vector3.new(2, 3.5, 1),
-		position = raftStartPos + Vector3.new(0, 2.5, 2),
-		color = Color3.fromRGB(255, 215, 175),
-		material = Enum.Material.SmoothPlastic,
-		parent = deco,
-		canCollide = false,
-	})
-	-- Animar la llegada con TweenService
+	weldTo(flag)
+
+	-- Animar solo el root; WeldConstraints arrastran el mástil y la bandera
 	task.spawn(function()
 		local TweenService = game:GetService("TweenService")
 		local travelTime = 10
 		local ti = TweenInfo.new(travelTime, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
-		TweenService:Create(raft, ti, { Position = raftEndPos }):Play()
-		TweenService:Create(mast, ti, { Position = raftEndPos + Vector3.new(0, 5.4, -3) }):Play()
-		TweenService:Create(flag, ti, { Position = raftEndPos + Vector3.new(2, 10.5, -3) }):Play()
-		TweenService:Create(dummy, ti, { Position = raftEndPos + Vector3.new(0, 2.5, 2) }):Play()
-		-- Ondear bandera
-		task.delay(travelTime, function()
-			local waveLoop = true
-			local flagOffset = 0
-			game:GetService("RunService").Heartbeat:Connect(function(dt)
-				if not waveLoop or not flag.Parent then
-					waveLoop = false
-					return
-				end
-				flagOffset += dt * 3
-				flag.CFrame = CFrame.new(raftEndPos + Vector3.new(2 + math.sin(flagOffset) * 0.4, 10.5, -3))
-			end)
+		local tw = TweenService:Create(raftRoot, ti, { Position = raftEndPos })
+		tw:Play()
+		tw.Completed:Wait()
+		-- Después de llegar: soltar weld de la bandera y ondearla independientemente
+		for _, w in raftRoot:GetChildren() do
+			if w:IsA("WeldConstraint") and w.Part1 == flag then
+				w:Destroy()
+				break
+			end
+		end
+		local flagOffset = 0
+		local flagRestPos = raftEndPos + Vector3.new(2, 10.5, -3)
+		game:GetService("RunService").Heartbeat:Connect(function(dt)
+			if not flag.Parent then return end
+			flagOffset += dt * 3
+			flag.CFrame = CFrame.new(flagRestPos + Vector3.new(math.sin(flagOffset) * 0.5, 0, 0))
 		end)
 	end)
 
@@ -516,12 +537,66 @@ local function buildBeachZone(zoneFolder: Folder, center: Vector3, challenge)
 	end
 
 	createMissionBoard(zoneFolder, center + Vector3.new(-15, 6, 35), "🏝️ Llegada", {
-		"Completá objetivos (panel izquierdo).",
-		"Cruzá el puente con cuidado.",
-		"¡Espinas abajo si caés!",
+		"1) Recolectá 3 maderitas + 2 lianas.",
+		"2) Tocá el PORTAL VERDE (junto al puente).",
+		"3) ¡El puente se abrirá! Cruzá con cuidado.",
+		"¡Espinas abajo si caés del puente!",
 	})
 
-	createFinish(zoneFolder, center + Vector3.new(72, 3, 0))
+	-- Portal verde: más alto y con cartel para que sea obvio
+	local finishPos = center + Vector3.new(72, 3, 0)
+	createFinish(zoneFolder, finishPos)
+	-- Arco de entrada al portal (hace visible que hay algo interactivo aquí)
+	makePart({
+		name = "PortalArch_L",
+		size = Vector3.new(1.5, 10, 1.5),
+		position = finishPos + Vector3.new(-7, 2, 0),
+		color = Color3.fromRGB(0, 230, 90),
+		material = Enum.Material.Neon,
+		parent = zoneFolder,
+		canCollide = false,
+	})
+	makePart({
+		name = "PortalArch_R",
+		size = Vector3.new(1.5, 10, 1.5),
+		position = finishPos + Vector3.new(7, 2, 0),
+		color = Color3.fromRGB(0, 230, 90),
+		material = Enum.Material.Neon,
+		parent = zoneFolder,
+		canCollide = false,
+	})
+	makePart({
+		name = "PortalArch_Top",
+		size = Vector3.new(16, 1.5, 1.5),
+		position = finishPos + Vector3.new(0, 7, 0),
+		color = Color3.fromRGB(0, 230, 90),
+		material = Enum.Material.Neon,
+		parent = zoneFolder,
+		canCollide = false,
+	})
+	-- Letrero encima del portal
+	local portalSign = makePart({
+		name = "PortalSign",
+		size = Vector3.new(14, 5, 0.5),
+		position = finishPos + Vector3.new(0, 12, 0),
+		color = Color3.fromRGB(20, 60, 30),
+		material = Enum.Material.SmoothPlastic,
+		parent = zoneFolder,
+		canCollide = false,
+	})
+	local psg = Instance.new("SurfaceGui")
+	psg.Face = Enum.NormalId.Front
+	psg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	psg.PixelsPerStud = 40
+	psg.Parent = portalSign
+	local psl = Instance.new("TextLabel")
+	psl.Size = UDim2.fromScale(1, 1)
+	psl.BackgroundTransparency = 1
+	psl.Text = "⬇️ TOCA EL PORTAL\nPara abrir el puente ⬇️"
+	psl.TextColor3 = Color3.fromRGB(0, 255, 100)
+	psl.TextScaled = true
+	psl.Font = Enum.Font.GothamBold
+	psl.Parent = psg
 
 	-- Puente a la selva: termina justo frente a la entrada oeste del laberinto
 	local bridgeStart = center + Vector3.new(82, 4, 0)

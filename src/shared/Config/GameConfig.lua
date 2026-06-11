@@ -133,9 +133,9 @@ GameConfig.Challenges = {
 		requiredCraft = nil,
 		zoneSize = Vector3.new(120, 30, 120),
 		objectives = {
-			{ type = "collect", resource = "Wood", amount = 3, text = "Recolectar madera (suelo o copas)" },
+			{ type = "collect", resource = "Wood", amount = 3, text = "Recolectar madera (suelo o palmeras)" },
 			{ type = "collect", resource = "Vine", amount = 2, text = "Recolectar lianas" },
-			{ type = "reach", text = "Cruzar el puente a la selva (sin caer)" },
+			{ type = "reach", text = "Tocar el portal verde junto al puente" },
 		},
 	},
 	JungleMaze = {
