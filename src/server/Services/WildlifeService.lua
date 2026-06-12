@@ -106,7 +106,7 @@ function WildlifeService.init()
 	-- Cada criatura tiene su propio timer para limitar frecuencia de búsqueda de target
 	local PASSIVE_TICK = 0.1    -- 10 Hz para criaturas pasivas
 	local AGGRESSIVE_TARGET_TICK = 0.5  -- Re-busca target cada 0.5s (no 60/s)
-	local CHASE_RADIUS = 55
+	local CHASE_RADIUS = 28  -- reducido: solo persigue de cerca
 
 	for _, creature in WildlifeService._creatures do
 		creature._moveTimer = 0
@@ -213,21 +213,22 @@ function WildlifeService.populateIsland(map: Folder)
 		Vector3.new(-35, 6, 22),
 	})
 
-	-- Selva / laberinto: monos pasivos + jabalíes agresivos afuera del laberinto
+	-- Selva: monos pasivos cerca del laberinto, fuera de sus muros
 	WildlifeService.createCreature(wildlifeFolder, Vector3.new(130, 9, 100), "Monkey", false, {
 		Vector3.new(130, 9, 100),
 		Vector3.new(145, 9, 115),
 		Vector3.new(118, 9, 120),
 	})
-	WildlifeService.createCreature(wildlifeFolder, Vector3.new(260, 9, 180), "Boar", true, {
-		Vector3.new(260, 9, 180),
-		Vector3.new(275, 9, 195),
-		Vector3.new(248, 9, 200),
+	-- Jabalíes reubicados al área del RÍO (X>350), lejos del laberinto (X:90-310)
+	WildlifeService.createCreature(wildlifeFolder, Vector3.new(355, 6, 55), "Boar", true, {
+		Vector3.new(355, 6, 55),
+		Vector3.new(370, 6, 40),
+		Vector3.new(340, 6, 65),
 	})
-	WildlifeService.createCreature(wildlifeFolder, Vector3.new(285, 9, 120), "Boar", true, {
-		Vector3.new(285, 9, 120),
-		Vector3.new(300, 9, 135),
-		Vector3.new(270, 9, 140),
+	WildlifeService.createCreature(wildlifeFolder, Vector3.new(380, 6, -30), "Boar", true, {
+		Vector3.new(380, 6, -30),
+		Vector3.new(395, 6, -15),
+		Vector3.new(365, 6, -45),
 	})
 
 	-- Loros volando bajo (caminan rápido)

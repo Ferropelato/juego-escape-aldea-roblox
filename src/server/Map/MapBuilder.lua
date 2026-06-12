@@ -423,72 +423,41 @@ local function buildBeachZone(zoneFolder: Folder, center: Vector3, challenge)
 	createZoneBounds(zoneFolder, challenge, center)
 	local deco = PropGenerator.decoFolder(zoneFolder)
 
-	-- Balsa de llegada: viene desde el mar, animada con Model+Weld para mantener las piezas juntas
-	local raftStartPos = center + Vector3.new(-30, 1, -180)
-	local raftEndPos   = center + Vector3.new(-30, 1, -62)
-
-	local raftModel = Instance.new("Model")
-	raftModel.Name = "ArrivalRaft"
-	raftModel.Parent = deco
-
-	local raftRoot = makePart({
-		name = "RaftRoot",
+	-- Balsa amarrada al muelle (decoración estática, bandera ondea en el viento)
+	local raftPos = center + Vector3.new(-30, 1, -62)
+	makePart({
+		name = "ArrivalRaft",
 		size = Vector3.new(10, 0.8, 16),
-		position = raftStartPos,
+		position = raftPos,
 		color = Color3.fromRGB(115, 80, 48),
 		material = Enum.Material.WoodPlanks,
-		parent = raftModel,
+		parent = deco,
 	})
-
-	local function weldTo(child: Part)
-		local w = Instance.new("WeldConstraint")
-		w.Part0 = raftRoot
-		w.Part1 = child
-		w.Parent = raftRoot
-	end
-
-	local mast = makePart({
+	makePart({
 		name = "RaftMast",
 		size = Vector3.new(0.7, 10, 0.7),
-		position = raftStartPos + Vector3.new(0, 5.4, -3),
+		position = raftPos + Vector3.new(0, 5.4, -3),
 		color = Color3.fromRGB(85, 58, 32),
 		material = Enum.Material.Wood,
-		parent = raftModel,
+		parent = deco,
 	})
-	weldTo(mast)
-
 	local flag = makePart({
 		name = "RaftFlag",
 		size = Vector3.new(4, 2.5, 0.15),
-		position = raftStartPos + Vector3.new(2, 10.5, -3),
+		position = raftPos + Vector3.new(2, 10.5, -3),
 		color = Color3.fromRGB(220, 50, 50),
 		material = Enum.Material.SmoothPlastic,
-		parent = raftModel,
+		parent = deco,
 		canCollide = false,
 	})
-	weldTo(flag)
-
-	-- Animar solo el root; WeldConstraints arrastran el mástil y la bandera
+	-- Bandera que ondea en el lugar (sin tween, sin weld)
 	task.spawn(function()
-		local TweenService = game:GetService("TweenService")
-		local travelTime = 10
-		local ti = TweenInfo.new(travelTime, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
-		local tw = TweenService:Create(raftRoot, ti, { Position = raftEndPos })
-		tw:Play()
-		tw.Completed:Wait()
-		-- Después de llegar: soltar weld de la bandera y ondearla independientemente
-		for _, w in raftRoot:GetChildren() do
-			if w:IsA("WeldConstraint") and w.Part1 == flag then
-				w:Destroy()
-				break
-			end
-		end
 		local flagOffset = 0
-		local flagRestPos = raftEndPos + Vector3.new(2, 10.5, -3)
+		local flagBasePos = raftPos + Vector3.new(2, 10.5, -3)
 		game:GetService("RunService").Heartbeat:Connect(function(dt)
 			if not flag.Parent then return end
 			flagOffset += dt * 3
-			flag.CFrame = CFrame.new(flagRestPos + Vector3.new(math.sin(flagOffset) * 0.5, 0, 0))
+			flag.CFrame = CFrame.new(flagBasePos + Vector3.new(math.sin(flagOffset) * 0.5, 0, 0))
 		end)
 	end)
 
@@ -627,10 +596,11 @@ local function buildJungleZone(zoneFolder: Folder, center: Vector3, challenge)
 		local board = signModel:FindFirstChild("Board", true)
 		if board then
 			local prompt = Instance.new("ProximityPrompt")
-			prompt.ActionText = "Leer señal"
-			prompt.ObjectText = "Señal " .. spot.number
+			prompt.ActionText = "Registrar señal " .. spot.number
+			prompt.ObjectText = "📍 Señal " .. spot.number
 			prompt.HoldDuration = 0
-			prompt.MaxActivationDistance = 12
+			prompt.MaxActivationDistance = 22
+			prompt.RequiresLineOfSight = false
 			prompt.Parent = board
 			local signNum = spot.number
 			prompt.Triggered:Connect(function(player)
@@ -640,7 +610,7 @@ local function buildJungleZone(zoneFolder: Folder, center: Vector3, challenge)
 		end
 	end
 
-	-- Palmeras escalables FUERA del laberinto (junto a la entrada oeste)
+	-- Palmeras escalables con liana FUERA del laberinto (zona de entrada)
 	PropGenerator.climbablePalmTree(deco, center + Vector3.new(-98, 0, -68), 1, "Vine", 211)
 	PropGenerator.climbablePalmTree(deco, center + Vector3.new(-98, 0, -42), 1, "Vine", 212)
 	PropGenerator.scatterPalms(deco, center + Vector3.new(-98, 0, -55), 18, 3, 201)
@@ -648,9 +618,15 @@ local function buildJungleZone(zoneFolder: Folder, center: Vector3, challenge)
 	PropGenerator.fern(deco, center + Vector3.new(-85, 0, 50))
 	PropGenerator.fern(deco, center + Vector3.new(-85, 0, -20))
 
-	createResourceNode(zoneFolder, "Vine", center + Vector3.new(-20, 3, 55))
-	createResourceNode(zoneFolder, "Vine", center + Vector3.new(15, 3, 72))
-	createResourceNode(zoneFolder, "Wood", center + Vector3.new(-35, 3, 88))
+	-- Recursos de Liana en la zona PRE-laberinto (accesibles sin entrar al laberinto)
+	-- y en el pasillo de salida (accesibles al salir del laberinto)
+	-- Zona de entrada (oeste, afuera de los muros):
+	createResourceNode(zoneFolder, "Vine", center + Vector3.new(-108, 3, -55))  -- junto al spawn
+	createResourceNode(zoneFolder, "Vine", center + Vector3.new(-105, 3, -35))  -- cerca del arco
+	createResourceNode(zoneFolder, "Wood", center + Vector3.new(-104, 3, -70))  -- para crafteo futuro
+	-- Zona de salida (este, en el pasillo de salida al aire libre):
+	createResourceNode(zoneFolder, "Vine", center + Vector3.new(80, 3, 30))     -- pasillo de salida
+	createResourceNode(zoneFolder, "Wood", center + Vector3.new(85, 3, 50))
 
 	local finishPos = mazeFinishPos or (center + Vector3.new(92, 3, 38))
 	createFinish(zoneFolder, finishPos)

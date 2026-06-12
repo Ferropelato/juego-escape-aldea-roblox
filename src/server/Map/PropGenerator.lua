@@ -349,33 +349,90 @@ end
 -- ─── Poste señal mejorado ────────────────────────────────────
 function PropGenerator.signPost(parent: Instance, position: Vector3, number: number, text: string?)
 	local model = folder(parent, "Sign_" .. number)
+
+	-- Faro Neon: visible desde todos los ángulos dentro del laberinto
+	local colors = {
+		[1] = Color3.fromRGB(255, 80, 80),   -- rojo
+		[2] = Color3.fromRGB(255, 180, 0),   -- naranja
+		[3] = Color3.fromRGB(80, 255, 80),   -- verde
+		[4] = Color3.fromRGB(80, 180, 255),  -- celeste
+		[5] = Color3.fromRGB(200, 80, 255),  -- violeta
+	}
+	local glowColor = colors[number] or Color3.fromRGB(255, 255, 0)
+
+	-- Disco en el suelo (indica dónde pisar)
+	part({
+		name = "FloorGlow",
+		size = Vector3.new(5, 0.2, 5),
+		position = position + Vector3.new(0, 0.1, 0),
+		color = glowColor,
+		material = Enum.Material.Neon,
+		parent = model,
+		canCollide = false,
+	})
+
+	-- Poste Neon brillante
 	part({
 		name = "Pole",
-		size = Vector3.new(0.6, 7, 0.6),
-		position = position + Vector3.new(0, 3.5, 0),
-		color = Color3.fromRGB(90, 60, 35),
-		material = Enum.Material.Wood,
+		size = Vector3.new(0.9, 12, 0.9),
+		position = position + Vector3.new(0, 6, 0),
+		color = glowColor,
+		material = Enum.Material.Neon,
 		parent = model,
+		canCollide = false,
 	})
-	part({
+
+	-- Board (invisible pero necesario para ProximityPrompt y BillboardGui)
+	local board = part({
 		name = "Board",
-		size = Vector3.new(5, 3, 0.4),
-		position = position + Vector3.new(0, 6.5, 0),
-		color = Color3.fromRGB(200, 160, 80),
-		material = Enum.Material.WoodPlanks,
+		size = Vector3.new(0.1, 0.1, 0.1),
+		position = position + Vector3.new(0, 11, 0),
+		color = Color3.new(0, 0, 0),
+		material = Enum.Material.SmoothPlastic,
 		parent = model,
+		canCollide = false,
+		transparency = 1,
 	})
-	local gui = Instance.new("SurfaceGui")
-	gui.Face = Enum.NormalId.Front
-	gui.Parent = model.Board
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Text = text or ("→ " .. number)
-	label.TextColor3 = Color3.fromRGB(40, 30, 20)
-	label.TextScaled = true
-	label.Font = Enum.Font.GothamBold
-	label.Parent = gui
+
+	-- BillboardGui: número grande visible desde cualquier ángulo
+	local bb = Instance.new("BillboardGui")
+	bb.Size = UDim2.new(0, 140, 0, 100)
+	bb.StudsOffset = Vector3.new(0, 0, 0)
+	bb.AlwaysOnTop = false
+	bb.MaxDistance = 60
+	bb.Parent = board
+
+	local bg = Instance.new("Frame")
+	bg.Size = UDim2.fromScale(1, 1)
+	bg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+	bg.BackgroundTransparency = 0.15
+	bg.BorderSizePixel = 0
+	bg.Parent = bb
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.15, 0)
+	corner.Parent = bg
+
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.fromScale(1, 0.55)
+	lbl.Position = UDim2.fromScale(0, 0)
+	lbl.BackgroundTransparency = 1
+	lbl.Text = "📍 SEÑAL " .. number
+	lbl.TextColor3 = glowColor
+	lbl.TextScaled = true
+	lbl.Font = Enum.Font.GothamBold
+	lbl.Parent = bg
+
+	local sub = Instance.new("TextLabel")
+	sub.Size = UDim2.fromScale(1, 0.4)
+	sub.Position = UDim2.fromScale(0, 0.58)
+	sub.BackgroundTransparency = 1
+	sub.Text = "Presioná E para registrar"
+	sub.TextColor3 = Color3.new(1, 1, 1)
+	sub.TextScaled = true
+	sub.Font = Enum.Font.Gotham
+	sub.Parent = bg
+
 	return model
 end
 
