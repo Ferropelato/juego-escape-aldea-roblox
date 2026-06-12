@@ -577,40 +577,29 @@ local function buildBeachZone(zoneFolder: Folder, center: Vector3, challenge)
 end
 
 local function buildJungleZone(zoneFolder: Folder, center: Vector3, challenge)
-	createZoneFloor(zoneFolder, center, Vector3.new(235, 0, 175))
-	createSpawn(zoneFolder, center + Vector3.new(-114, 0, -55))  -- frente a la entrada del laberinto
+	print("[MapBuilder] buildJungleZone START center=" .. tostring(center))
+	createZoneFloor(zoneFolder, center, Vector3.new(250, 0, 200))
+	createSpawn(zoneFolder, center + Vector3.new(-114, 0, -55))
 	createZoneBounds(zoneFolder, challenge, center)
 	local deco = PropGenerator.decoFolder(zoneFolder)
 
-	createMissionBoard(zoneFolder, center + Vector3.new(-82, 6, -68), "🌿 Laberinto de selva", {
-		"Entrá solo por el arco oeste (no se puede rodear).",
-		"Seguí las señales 1 → 5 (pulsa E).",
-		"Pasá el arco SALIDA → y tocá el checkpoint verde.",
-		"Palmeras con liana: subí la espiral caminando (podés moverte a los costados).",
+	createMissionBoard(zoneFolder, center + Vector3.new(-110, 6, -55), "🌿 Laberinto de selva", {
+		"1) Agarrá las 2 LIANAS (bloques marrones en esta zona).",
+		"2) Entrá al laberinto por el arco oeste.",
+		"3) Navegá hasta la SALIDA al este.",
+		"4) Tocá el portal verde para avanzar.",
 	})
 
+	-- Laberinto: señales son decorativas (ya no son requisito)
 	local _, signSpots, _exitPos, mazeFinishPos = PropGenerator.jungleMazeWalls(deco, center, center.Y + 0.25)
+	print("[MapBuilder] jungleMazeWalls OK, signSpots=" .. #signSpots)
 
 	for _, spot in signSpots do
-		local signModel = PropGenerator.signPost(deco, spot.position, spot.number, "→ " .. spot.number)
-		local board = signModel:FindFirstChild("Board", true)
-		if board then
-			local prompt = Instance.new("ProximityPrompt")
-			prompt.ActionText = "Registrar señal " .. spot.number
-			prompt.ObjectText = "📍 Señal " .. spot.number
-			prompt.HoldDuration = 0
-			prompt.MaxActivationDistance = 22
-			prompt.RequiresLineOfSight = false
-			prompt.Parent = board
-			local signNum = spot.number
-			prompt.Triggered:Connect(function(player)
-				local PuzzleManager = require(script.Parent.Parent.Challenges.PuzzleManager)
-				PuzzleManager.handleInteraction(player, "MazeSign", signNum)
-			end)
-		end
+		-- Señales visuales (sin ProximityPrompt — ya no son requisito de objetivo)
+		PropGenerator.signPost(deco, spot.position, spot.number, "")
 	end
 
-	-- Palmeras escalables con liana FUERA del laberinto (zona de entrada)
+	-- Decoración
 	PropGenerator.climbablePalmTree(deco, center + Vector3.new(-98, 0, -68), 1, "Vine", 211)
 	PropGenerator.climbablePalmTree(deco, center + Vector3.new(-98, 0, -42), 1, "Vine", 212)
 	PropGenerator.scatterPalms(deco, center + Vector3.new(-98, 0, -55), 18, 3, 201)
@@ -618,15 +607,14 @@ local function buildJungleZone(zoneFolder: Folder, center: Vector3, challenge)
 	PropGenerator.fern(deco, center + Vector3.new(-85, 0, 50))
 	PropGenerator.fern(deco, center + Vector3.new(-85, 0, -20))
 
-	-- Recursos de Liana en la zona PRE-laberinto (accesibles sin entrar al laberinto)
-	-- y en el pasillo de salida (accesibles al salir del laberinto)
-	-- Zona de entrada (oeste, afuera de los muros):
-	createResourceNode(zoneFolder, "Vine", center + Vector3.new(-108, 3, -55))  -- junto al spawn
-	createResourceNode(zoneFolder, "Vine", center + Vector3.new(-105, 3, -35))  -- cerca del arco
-	createResourceNode(zoneFolder, "Wood", center + Vector3.new(-104, 3, -70))  -- para crafteo futuro
-	-- Zona de salida (este, en el pasillo de salida al aire libre):
-	createResourceNode(zoneFolder, "Vine", center + Vector3.new(80, 3, 30))     -- pasillo de salida
-	createResourceNode(zoneFolder, "Wood", center + Vector3.new(85, 3, 50))
+	-- *** RECURSOS: posiciones verificadas FUERA de los muros del laberinto ***
+	-- Laberinto ocupa X:90-310, Z:78.5-221.5 (con cell=11, cols=20, rows=13)
+	-- Spawn está en center+(-114,0,-55) = (86,8,95). Recursos al OESTE del muro (X<90):
+	createResourceNode(zoneFolder, "Vine", center + Vector3.new(-116, 3, -55))  -- X=84, Z=95 (spawn area)
+	createResourceNode(zoneFolder, "Vine", center + Vector3.new(-116, 3, -38))  -- X=84, Z=112 (junto al arco)
+	createResourceNode(zoneFolder, "Wood", center + Vector3.new(-116, 3, -72))  -- X=84, Z=78 (norte del spawn)
+	createResourceNode(zoneFolder, "Wood", center + Vector3.new(-116, 3, -20))  -- X=84, Z=130 (sur del arco)
+	print("[MapBuilder] recursos creados OK")
 
 	local finishPos = mazeFinishPos or (center + Vector3.new(92, 3, 38))
 	createFinish(zoneFolder, finishPos)
